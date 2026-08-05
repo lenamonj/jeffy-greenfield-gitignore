@@ -177,6 +177,20 @@ fn run_oracle(repo: &Path, queries: &[String]) -> Result<Vec<OracleRow>, String>
     Ok(rows)
 }
 
+/// check-ignore normalizes each pathspec before matching - a leading "./"
+/// segment (repeated any number of times) is stripped by git's pathspec
+/// machinery - while the -z output echoes the pathspec verbatim. The
+/// matcher must therefore receive the normalized path even though the
+/// oracle is fed, and echoes, the original. Only the leading strip is
+/// ported here; it is the whole of the reproduced divergence.
+fn normalize_query(q: &str) -> &str {
+    let mut norm = q;
+    while let Some(rest) = norm.strip_prefix("./") {
+        norm = rest;
+    }
+    norm
+}
+
 fn git_in(dir: &Path, args: &[&str]) -> Result<(), String> {
     let out = Command::new("git")
         .args(args)
@@ -351,10 +365,11 @@ fn run(args: &Args) -> Result<ExitCode, String> {
                 let oracle = run_oracle(&repo, &queries)?;
                 let mut disagreements = 0;
                 for (q, row) in queries.iter().zip(oracle.iter()) {
-                    let is_dir = std::fs::metadata(repo.join(q))
+                    let norm = normalize_query(q);
+                    let is_dir = std::fs::metadata(repo.join(norm))
                         .map(|m| m.is_dir())
                         .unwrap_or(false);
-                    let mine = matcher.is_ignored(q, is_dir);
+                    let mine = matcher.is_ignored(norm, is_dir);
                     if mine != row.ignored {
                         disagreements += 1;
                         println!(
@@ -443,6 +458,16 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
         let err = res.expect_err("oracle outside a repository must be a harness failure");
         assert!(err.contains("128"), "error should name exit 128, got: {err}");
+    }
+
+    /// The pathspec strip is leading-only and repeats: "./" segments at the
+    /// front vanish, everything after the first real segment is untouched.
+    #[test]
+    fn normalize_query_strips_leading_dotslash_only() {
+        assert_eq!(normalize_query("./a.log"), "a.log");
+        assert_eq!(normalize_query("././a.log"), "a.log");
+        assert_eq!(normalize_query("a.log"), "a.log");
+        assert_eq!(normalize_query("sub/./x.txt"), "sub/./x.txt");
     }
 
     /// Colliding F records - the same path written twice, or case-variants
