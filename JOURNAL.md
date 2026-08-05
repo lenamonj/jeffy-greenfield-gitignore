@@ -67,7 +67,7 @@ Next: row-trailing-whitespace - slice already shows 0 disagreements from the tri
 
 Task: row-trailing-whitespace (High, runtime) - sweep inventory row 2. The slice went green as a side effect of iter 5's trim port, so a bare replay would rubber-stamp; grew the slice from 4 to 8 cases first (two escaped trailing spaces, lone trailing backslash, interior spaces with trailing trim, escaped-space-only pattern vs a single-space path), then swept.
 Changed: corpus/trailing-whitespace/05-08.case hand-authored per the NUL token format (od-verified); PLAN.md growth line added under frozen counts; BACKLOG.md row line deleted. No source changes - the existing trim port survived all new cases.
-Checkpoint:
+Checkpoint: 2f0a52af22656cdedad5af1704c6334e6891c5a9; PLAN.md row trailing-whitespace ticked with this hash in the bookkeeping edit. Stall check: 4 corpus case files created outside state files, row task closed, no stall.
 Verification: Acceptance: failing-first evidence is iter 4's recorded 4 disagreements on this slice against the stub; grown slice replays 8 cases, 18 queries, 0 disagreements, exit 0 - including the genuinely new cases the matcher had never seen. Full Verify: exit 1, 57 cases, 132 queries, 45 disagreements (unchanged set, all in glob-engine slices), red at last checkpoint too, not a regression. Corpus grew 53 to 57 cases, never shrank. cargo test: 4 suites ok. cargo tree: gitignore-matcher alone.
 Learnings: Growing a green slice before ticking its row turns a rubber-stamp sweep into a real one; the growth cases are chosen blind to the implementation (oracle decides), so agreement is evidence, not tautology.
 Next: row-negation - slice shows 2 disagreements; needs * wildcard support in the glob engine.
