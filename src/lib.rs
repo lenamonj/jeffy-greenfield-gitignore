@@ -90,32 +90,133 @@ fn parse_source(content: &[u8]) -> Vec<Pattern> {
         .collect()
 }
 
-/// Literal comparison of a pattern body against a candidate, interpreting
-/// backslash escapes in the body. Wildcard metacharacters are compared
-/// literally until the wildcard inventory rows implement them. A lone
-/// trailing backslash matches nothing, as in fnmatch.
-fn lit_match(body: &str, candidate: &str) -> bool {
-    let p = body.as_bytes();
-    let c = candidate.as_bytes();
-    let mut i = 0;
-    let mut j = 0;
-    while i < p.len() {
-        let ch = if p[i] == b'\\' {
+/// Parse a bracket expression starting at `p[0] == b'['` and test `c`
+/// against it. Returns (bytes consumed, matched-after-negation), or None
+/// for an unclosed class, which matches nothing, matching git's posture
+/// toward malformed patterns. `!` and `^` both negate; a `]` first in the
+/// member list is literal; `a-z` ranges and backslash escapes apply.
+fn class_match(p: &[u8], c: u8) -> Option<(usize, bool)> {
+    let mut i = 1;
+    let mut negate = false;
+    if i < p.len() && (p[i] == b'!' || p[i] == b'^') {
+        negate = true;
+        i += 1;
+    }
+    let mut matched = false;
+    let mut prev: Option<u8> = None;
+    let mut first = true;
+    loop {
+        if i >= p.len() {
+            return None;
+        }
+        let raw = p[i];
+        if raw == b']' && !first {
+            i += 1;
+            break;
+        }
+        first = false;
+        if raw == b'-' && prev.is_some() && i + 1 < p.len() && p[i + 1] != b']' {
+            i += 1;
+            let hi = if p[i] == b'\\' {
+                i += 1;
+                if i >= p.len() {
+                    return None;
+                }
+                p[i]
+            } else {
+                p[i]
+            };
+            if prev.unwrap() <= c && c <= hi {
+                matched = true;
+            }
+            prev = None;
+            i += 1;
+            continue;
+        }
+        let lit = if raw == b'\\' {
             i += 1;
             if i >= p.len() {
-                return false;
+                return None;
             }
             p[i]
         } else {
-            p[i]
+            raw
         };
-        if j >= c.len() || c[j] != ch {
-            return false;
+        if lit == c {
+            matched = true;
         }
+        prev = Some(lit);
         i += 1;
-        j += 1;
     }
-    j == c.len()
+    Some((i, matched != negate))
+}
+
+/// Glob match of a pattern body against a candidate, with fnmatch
+/// FNM_PATHNAME semantics as gitignore uses them: `*` and `?` and bracket
+/// expressions never match `/`; `\x` is literal x; a lone trailing
+/// backslash matches nothing. `**` is not special here yet - the globstar
+/// inventory rows implement it - so consecutive stars behave as one.
+/// Recursive backtracking; corpus-scale patterns keep it cheap.
+fn glob_match(body: &[u8], text: &[u8]) -> bool {
+    let mut pi = 0;
+    let mut ti = 0;
+    while pi < body.len() {
+        match body[pi] {
+            b'*' => {
+                let rest = &body[pi + 1..];
+                let mut k = ti;
+                loop {
+                    if glob_match(rest, &text[k..]) {
+                        return true;
+                    }
+                    if k >= text.len() || text[k] == b'/' {
+                        return false;
+                    }
+                    k += 1;
+                }
+            }
+            b'?' => {
+                if ti >= text.len() || text[ti] == b'/' {
+                    return false;
+                }
+                pi += 1;
+                ti += 1;
+            }
+            b'[' => {
+                if ti >= text.len() || text[ti] == b'/' {
+                    return false;
+                }
+                match class_match(&body[pi..], text[ti]) {
+                    Some((consumed, m)) => {
+                        if !m {
+                            return false;
+                        }
+                        pi += consumed;
+                        ti += 1;
+                    }
+                    None => return false,
+                }
+            }
+            b'\\' => {
+                if pi + 1 >= body.len() {
+                    return false;
+                }
+                if ti >= text.len() || text[ti] != body[pi + 1] {
+                    return false;
+                }
+                pi += 2;
+                ti += 1;
+            }
+            ch => {
+                if ti >= text.len() || text[ti] != ch {
+                    return false;
+                }
+                pi += 1;
+                ti += 1;
+            }
+        }
+    }
+    ti == text.len()
 }
 
 fn basename(path: &str) -> &str {
@@ -127,9 +228,9 @@ fn pattern_matches(p: &Pattern, rel: &str, is_dir: bool) -> bool {
         return false;
     }
     if p.anchored {
-        lit_match(&p.body, rel)
+        glob_match(p.body.as_bytes(), rel.as_bytes())
     } else {
-        lit_match(&p.body, basename(rel))
+        glob_match(p.body.as_bytes(), basename(rel).as_bytes())
     }
 }
 
@@ -236,8 +337,32 @@ mod tests {
     #[test]
     fn escaped_hash_is_a_literal_pattern() {
         let p = parse_line("\\#hash").expect("escaped hash is a pattern");
-        assert!(lit_match(&p.body, "#hash"));
-        assert!(!lit_match(&p.body, "hash"));
+        assert!(glob_match(p.body.as_bytes(), b"#hash"));
+        assert!(!glob_match(p.body.as_bytes(), b"hash"));
+    }
+
+    #[test]
+    fn glob_star_and_question_never_cross_slash() {
+        assert!(glob_match(b"*.log", b"a.log"));
+        assert!(!glob_match(b"*.log", b"sub/a.log"), "* must not cross /");
+        assert!(glob_match(b"a?c", b"abc"));
+        assert!(!glob_match(b"a?c", b"a/c"), "? must not cross /");
+        assert!(glob_match(b"sub/*.txt", b"sub/a.txt"));
+        assert!(!glob_match(b"sub/*.txt", b"sub/d/b.txt"));
+    }
+
+    #[test]
+    fn glob_classes_and_escapes() {
+        assert!(glob_match(b"[abc].txt", b"a.txt"));
+        assert!(!glob_match(b"[abc].txt", b"d.txt"));
+        assert!(glob_match(b"[!a-c].txt", b"d.txt"));
+        assert!(!glob_match(b"[!a-c].txt", b"a.txt"));
+        assert!(glob_match(b"[]-]x", b"]x"), "leading ] is a literal member");
+        assert!(glob_match(b"[]-]x", b"-x"));
+        assert!(!glob_match(b"[]-]x", b"ax"));
+        assert!(glob_match(b"\\*.lit", b"*.lit"), "escaped star is literal");
+        assert!(!glob_match(b"\\*.lit", b"a.lit"));
+        assert!(!glob_match(b"[abc", b"a"), "unclosed class matches nothing");
     }
 
     #[test]

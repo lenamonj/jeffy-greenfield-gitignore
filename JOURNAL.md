@@ -71,3 +71,12 @@ Checkpoint: 2f0a52af22656cdedad5af1704c6334e6891c5a9; PLAN.md row trailing-white
 Verification: Acceptance: failing-first evidence is iter 4's recorded 4 disagreements on this slice against the stub; grown slice replays 8 cases, 18 queries, 0 disagreements, exit 0 - including the genuinely new cases the matcher had never seen. Full Verify: exit 1, 57 cases, 132 queries, 45 disagreements (unchanged set, all in glob-engine slices), red at last checkpoint too, not a regression. Corpus grew 53 to 57 cases, never shrank. cargo test: 4 suites ok. cargo tree: gitignore-matcher alone.
 Learnings: Growing a green slice before ticking its row turns a rubber-stamp sweep into a real one; the growth cases are chosen blind to the implementation (oracle decides), so agreement is evidence, not tautology.
 Next: row-negation - slice shows 2 disagreements; needs * wildcard support in the glob engine.
+
+## iter 7/12 | cd1c2080-020939 | 2026-08-04 | row-negation | done
+
+Task: row-negation (High, runtime) - sweep inventory row 3. The negation mechanics (last-match-wins, ! flag, \! escape) already agreed; the slice's two disagreements both needed *, so this iteration landed the segment glob engine: * and ? and bracket expressions that never match /, ranges, ] -literal-first, ! and ^ class negation, backslash escapes, lone trailing backslash matches nothing, unclosed class matches nothing. ** stays deliberately non-special until the globstar rows.
+Changed: src/lib.rs - lit_match replaced by glob_match plus class_match; pattern_matches now globs. Contract preserved: is_ignored signature and source precedence untouched; swept rows blank-and-comment and trailing-whitespace re-verified green under the new engine in the same full replay, so no flip-back needed. BACKLOG.md row line deleted. 3 new unit tests pin slash-crossing, classes, escapes.
+Checkpoint:
+Verification: Acceptance: observed failing first this iteration - slice replay 2 disagreements (a.log, b.log vs pattern *.log), then 0 after, 4 cases 7 queries, exit 0. Full Verify: 45 disagreements fell to 8, all in globstar-leading and globstar-infix (the un-implemented ** rows); globstar-trailing went green via the excluded-ancestor walk judging abc/d ignored under abc/**, the same mechanism git uses. Red at last checkpoint too, not a regression. cargo test: 4 suites ok (9 tests total). cargo tree: gitignore-matcher alone.
+Learnings: none.
+Next: row-directory-only - slice already green from the core; grow it with oracle-blind cases before ticking, per the Lessons rule.
