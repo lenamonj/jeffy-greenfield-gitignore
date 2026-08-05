@@ -10,6 +10,9 @@ Rules:
 
 ## Now
 
+- [ ] fix-source-collision-model (Medium, test, harness): materialize() registers every .gitignore-named F record as a matcher source, but on an ignore_case filesystem the disk write folds names, so two colliding F records (F .gitignore then F .GITIGNORE) leave one file for the oracle while the matcher models two sources - reproduced: matcher=ignored vs oracle=not-ignored (no pattern matched) on the first record's pattern. Fix by modeling the fold on write (a colliding record replaces the earlier source's content) or by rejecting the collision as a harness failure, observed failing first either way. Acceptance: a two-record collision case replays 0 disagreements or exits 3 naming the collision.
+- [ ] fix-dotslash-query (Medium, runtime, matcher-driver): git check-ignore normalizes a leading ./ in a queried pathspec before matching but the driver feeds Q verbatim to is_ignored, so query ./a.log misses anchored pattern /a.log - reproduced: matcher=not-ignored vs oracle=ignored (pattern /a.log at .gitignore:1). Note the sibling backslash-separator claim was refuted by direct oracle evidence (stdin pathspecs are not backslash-folded; matcher already agrees), so the port is the dot-slash strip alone. Acceptance: corpus grown with a ./-prefixed query observed failing first, then replaying 0 disagreements.
+
 
 ## Next
 
@@ -24,7 +27,7 @@ Items needing a user decision before any work, one plain line each, never a chec
 
 One line per class: the idiom or defect class, the surface it applies to, and how it was settled - fixed class-complete with its enumerating check, or declined with the reason. Audits must not file findings inside a settled class unless its implementing code changed after settlement.
 
-- icase-reach (matcher and harness): every byte comparison on the verdict path folds under core.ignoreCase - fixed class-complete; sites are wildmatch text matching (WM_CASEFOLD port in glob_match/class_match/prefix strip), nested-.gitignore dir-prefix applicability (dir_applies), and ignore-source name discovery in materialize; each pinned by corpus cases the Verify command replays (wildcards/10, char-classes/13-15, nested-and-layered/11-12) plus unit tests; the oracle echo check is byte-exact by design since git echoes queries verbatim.
+- icase-reach (matcher and harness): every byte comparison on the verdict path folds under core.ignoreCase - fixed class-complete; sites are wildmatch text matching (WM_CASEFOLD port in glob_match/class_match/prefix strip), nested-.gitignore dir-prefix applicability (dir_applies), and ignore-source name discovery in materialize; each pinned by corpus cases the Verify command replays (wildcards/10, char-classes/13-15, nested-and-layered/11-12) plus unit tests; the oracle echo check is byte-exact by design since git echoes queries verbatim. Run-2 evaluator found a fourth site open - the filesystem's fold on write during materialization, where colliding F records desynchronize matcher and disk - tracked as fix-source-collision-model until fixed, when this line regains class-complete standing.
 
 ## Declined
 
