@@ -74,6 +74,8 @@ Grown at row-directory-only sweep: directory-only 5 to 9 (negated dir pattern, u
 
 Grown at row-anchoring sweep: anchoring 4 to 8 (anchored pattern inside nested .gitignore, anchored root wildcard, middle-slash single-star segment, anchored dir-only vs same name at depth). Total 65 cases, 152 queries.
 
+Grown at row-wildcards sweep: wildcards 5 to 9 (bare star incl dotfile, multi-star backtracking, repeated question marks, star plus class). Total 69 cases, 166 queries.
+
 ## Verify command
 Command: `cargo build --release && cargo run --release --bin differential -- --corpus corpus/ --strict`
 
