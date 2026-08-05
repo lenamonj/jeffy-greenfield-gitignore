@@ -51,7 +51,7 @@ The rows below are the pattern features enumerated from `gitignore(5)` and are *
 
 A row flips to `- [x] swept at <commit> - <cases run, all agreeing with the oracle>` only when the differential harness replays that row's corpus slice and every case matches. Each row's scope line names the corpus slice that defines it.
 
-- [ ] blank-and-comment: blank lines match nothing; `#` starts a comment; `\#` escapes a literal hash. Slice: `corpus/blank-and-comment`
+- [x] blank-and-comment: blank lines match nothing; `#` starts a comment; `\#` escapes a literal hash. Slice: `corpus/blank-and-comment` - swept at c7c8c158b5e6b224d3247a438973038572ab62ef - 4 cases, 8 queries, all agreeing with the oracle
 - [ ] trailing-whitespace: trailing spaces are stripped unless backslash-quoted. Slice: `corpus/trailing-whitespace`
 - [ ] negation: `!` re-includes a previously excluded path; `\!` escapes a literal bang. Slice: `corpus/negation`
 - [ ] directory-only: a trailing `/` restricts the match to directories. Slice: `corpus/directory-only`

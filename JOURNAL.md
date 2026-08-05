@@ -58,7 +58,7 @@ Next: row-blank-and-comment - first matcher semantics; its slice currently shows
 
 Task: row-blank-and-comment (High, runtime) - first matcher semantics plus the matcher core they require. Closed: lib.rs implements gitignore line parsing (blank skip, # comment skip, dir.c trim_trailing_spaces port, ! negation flag, trailing-/ dir_only flag, separator-anchoring flag), escape-aware literal matching (wildcard metacharacters deliberately literal until their rows land), last-match-wins per source, source precedence deepest .gitignore -> info/exclude -> excludesFile, and the excluded-ancestor walk.
 Changed: src/lib.rs rewritten from stub builder to working core. Contract: is_ignored(rel_path, is_dir) signature unchanged; caller (differential bin) untouched. BACKLOG.md row-blank-and-comment line deleted.
-Checkpoint:
+Checkpoint: c7c8c158b5e6b224d3247a438973038572ab62ef; PLAN.md row blank-and-comment ticked with this hash in the bookkeeping edit. Stall check: lib.rs changed outside state files, row task closed, no stall.
 Verification: Acceptance observed failing first this iteration: slice replay 3 disagreements against the stub (a.txt, note, escaped \#hash), then 0 disagreements after, exit 0, 4 cases 8 queries. cargo test: 5 passed across lib and harness (parse edges, trim port incl tab-not-trimmed, oracle contract pins). Full Verify: exit 1 with 45 disagreements (was 69) - red at last checkpoint too, not a regression; anchoring, directory-only, trailing-whitespace slices went green as core side effects, their rows stay unticked pending their own sweep iterations. cargo tree: gitignore-matcher alone.
 Learnings: none.
 Next: row-trailing-whitespace - slice already shows 0 disagreements from the trim port; sweep and tick it.
