@@ -56,7 +56,7 @@ A row flips to `- [x] swept at <commit> - <cases run, all agreeing with the orac
 - [x] negation: `!` re-includes a previously excluded path; `\!` escapes a literal bang. Slice: `corpus/negation` - swept at f949a7904bced6f69ce640ff7c16154f1346f9f9 - 4 cases, 7 queries, all agreeing with the oracle
 - [x] directory-only: a trailing `/` restricts the match to directories. Slice: `corpus/directory-only` - swept at 67109f71d6ed2e1fabe443b2b00cdb4ff12dca96 - 9 cases, 17 queries, all agreeing with the oracle
 - [x] anchoring: a pattern with a non-trailing `/` is relative to the `.gitignore` location; otherwise it matches at any depth. Slice: `corpus/anchoring` - swept at f94168a6335a112962770b6dcf53e96adcb2a854 - 8 cases, 19 queries, all agreeing with the oracle
-- [ ] wildcards: `*` and `?` never cross a `/`. Slice: `corpus/wildcards`
+- [x] wildcards: `*` and `?` never cross a `/`. Slice: `corpus/wildcards` - swept at 1db77f8e8b793425caa376e2809d55e0bf0879b3 - 9 cases, 31 queries, all agreeing with the oracle
 - [ ] char-classes: bracket expressions and ranges. Slice: `corpus/char-classes`
 - [ ] globstar-leading: a leading `**/` matches in all directories. Slice: `corpus/globstar-leading`
 - [ ] globstar-trailing: a trailing `/**` matches everything inside. Slice: `corpus/globstar-trailing`

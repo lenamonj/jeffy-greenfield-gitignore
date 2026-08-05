@@ -103,7 +103,7 @@ Next: row-wildcards - green from the glob engine; grow with oracle-blind wildcar
 
 Task: row-wildcards (High, runtime) - sweep inventory row 6. Slice was green from the glob engine, so grew it 5 to 9 cases first: bare * (matching dotfiles too - gitignore globs carry no shell dotfile exemption, confirmed by the oracle), a*b*c multi-star backtracking including the abcbc absorb case, ??.txt repeated single-char, and *.[ch] star-plus-class with a basename match at depth.
 Changed: corpus/wildcards/06-09.case hand-authored; PLAN.md growth line added; BACKLOG.md row line deleted. No source changes - the glob engine survived all new cases.
-Checkpoint:
+Checkpoint: 1db77f8e8b793425caa376e2809d55e0bf0879b3; PLAN.md row wildcards ticked with this hash in the bookkeeping edit. Stall check: 4 corpus case files created outside state files, row task closed, no stall.
 Verification: Acceptance: failing-first evidence is iter 4's recorded 8 disagreements on this slice against the stub; grown slice replays 9 cases, 31 queries, 0 disagreements, exit 0. Full Verify: exit 1, 69 cases, 166 queries, 8 disagreements, all in globstar-leading and globstar-infix; red at last checkpoint too, not a regression. Corpus grew 65 to 69, never shrank. cargo test: 4 suites ok. cargo tree: gitignore-matcher alone.
 Learnings: none.
 Next: row-char-classes - green from the engine; grow with oracle-blind class cases before ticking.
