@@ -108,6 +108,8 @@ Grown at fix-pathspec-normalization-port: anchoring 9 to 10 (interior ./ segment
 
 Grown at fix-trailing-dot-normalization: directory-only 9 to 10 (final-. and final-.. queries normalizing to dir/ against a dir-only pattern on a nonexistent directory; bare-name, raw trailing-slash, and unmatched controls). Total 102 cases, 280 queries.
 
+Grown at fix-unicode-collision-fold: nested-and-layered 13 to 14 (Unicode case-variant collision - a folding u-diaeresis pair leaving one file, last content under the first name, beside a non-folding sharp-s pair keeping two sources as an anti-overfold control; queries in both directions plus controls). Total 103 cases, 286 queries.
+
 ## Verify command
 Command: `cargo build --release && cargo run --release --bin differential -- --corpus corpus/ --strict`
 
@@ -159,6 +161,7 @@ Regressions: a row that was ticked and later disagrees is a High. Flip its row b
 - check-ignore matches the normalized pathspec but echoes it verbatim: ./-shaped corpus queries are legal, the echo check stays byte-exact, and normalization belongs on the matcher side of the comparison only.
 - Pathspec normalization is textual: .. consumes the previous segment with no existence check, duplicate slashes and . segments drop, one trailing slash survives. Never author corpus queries git cannot normalize (leading /, .. above the root, a query normalizing to nothing): those are exit-128 harness failures, not verdicts.
 - A pathspec's dir-ness survives normalization through a final . or .. segment, not only a literal trailing slash: git leaves dir/ behind, and a literal dir-only pattern matches it with no existence check; a wildcard-tail dir-only pattern (ghost/**/, pit/*/) does consult existence at the path-itself match, so the two families diverge on nonexistent directories.
+- The volume's case fold is the NTFS $UpCase table baked in at format time, matching no portable Unicode fold (probed live: u-diaeresis, fullwidth, and sigma pairs fold; sharp-s, dotless-i, Kelvin, final-sigma, supplementary-plane, and NFC/NFD pairs stay distinct); never predict the fold - read the disk back, as materialize does by keying sources on canonical on-disk paths.
 
 ## Definition of done
 Convergence requires all of the following simultaneously:

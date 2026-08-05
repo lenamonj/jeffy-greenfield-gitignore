@@ -241,7 +241,13 @@ fn git_in(dir: &Path, args: &[&str]) -> Result<(), String> {
 /// as ignore sources, since the filesystem name lookup folds too, and
 /// which files exist at all, since the filesystem folds colliding names
 /// on write: case-variant F records land in one file (last content,
-/// first name) and the source model folds with them.
+/// first name) and the source model folds with them. The write fold is
+/// the volume's own case table (NTFS $UpCase), which no portable fold
+/// reproduces - probed live: u-diaeresis, fullwidth, and sigma pairs
+/// fold while sharp-s, dotless-i, Kelvin, final-sigma, supplementary-
+/// plane, and NFC/NFD pairs stay distinct - so the model never predicts
+/// the fold: it keys each source by its canonical on-disk path and lets
+/// the filesystem answer.
 fn materialize(case_dir: &Path, recs: &[Rec]) -> Result<(PathBuf, Matcher, Vec<String>), String> {
     let repo = case_dir.join("repo");
     std::fs::create_dir_all(&repo).map_err(|e| format!("mkdir {}: {e}", repo.display()))?;
@@ -256,6 +262,9 @@ fn materialize(case_dir: &Path, recs: &[Rec]) -> Result<(PathBuf, Matcher, Vec<S
         // Exit 1 means unset, which is git's case-sensitive default.
         String::from_utf8_lossy(&out.stdout).trim() == "true"
     };
+    let repo_canon = repo
+        .canonicalize()
+        .map_err(|e| format!("canonicalize {}: {e}", repo.display()))?;
     let mut matcher = Matcher::new();
     matcher.set_ignore_case(ignore_case);
     // Ignore sources are collected, not registered per record: the write
@@ -264,7 +273,9 @@ fn materialize(case_dir: &Path, recs: &[Rec]) -> Result<(PathBuf, Matcher, Vec<S
     // holding the last content under the first name. The model must hold
     // exactly one source per surviving file, so a colliding record replaces
     // the earlier source's content instead of layering a second source the
-    // disk cannot hold.
+    // disk cannot hold. Sources are keyed by canonical on-disk path, read
+    // back after each write: the filesystem is the only authority on which
+    // names collide under its fold.
     let mut sources: Vec<(String, Vec<u8>)> = Vec::new();
     let mut source_index: BTreeMap<String, usize> = BTreeMap::new();
     let mut queries = Vec::new();
@@ -281,26 +292,31 @@ fn materialize(case_dir: &Path, recs: &[Rec]) -> Result<(PathBuf, Matcher, Vec<S
                 // "<dir>/.gitignore"; on an ignore_case repo that lookup is
                 // case-insensitive, so a file written as ".GitIgnore" is a
                 // live source there and must reach the matcher too.
-                let (dir, name) = match path.rsplit_once('/') {
-                    Some((d, n)) => (d, n),
-                    None => ("", path.as_str()),
-                };
+                let name = path.rsplit_once('/').map_or(path.as_str(), |(_, n)| n);
                 let is_source = if ignore_case {
                     name.eq_ignore_ascii_case(".gitignore")
                 } else {
                     name == ".gitignore"
                 };
                 if is_source {
-                    let key = if ignore_case {
-                        path.to_ascii_lowercase()
-                    } else {
-                        path.clone()
-                    };
+                    // The canonical path is the surviving on-disk spelling:
+                    // a write landing on an existing file through the
+                    // volume's fold canonicalizes to that file's name, so
+                    // colliding records share a key without the harness
+                    // predicting which names the volume folds.
+                    let canon = full
+                        .canonicalize()
+                        .map_err(|e| format!("canonicalize {path}: {e}"))?;
+                    let rel = canon
+                        .strip_prefix(&repo_canon)
+                        .map_err(|_| format!("{path}: canonical path escapes the repo"))?;
+                    let key = rel.to_string_lossy().replace('\\', "/");
+                    let dir = key.rsplit_once('/').map_or("", |(d, _)| d).to_string();
                     match source_index.get(&key) {
                         Some(&i) => sources[i].1 = content.clone(),
                         None => {
                             source_index.insert(key, sources.len());
-                            sources.push((dir.to_string(), content.clone()));
+                            sources.push((dir, content.clone()));
                         }
                     }
                 }
@@ -535,6 +551,53 @@ mod tests {
             matcher.is_ignored("beta.txt", false),
             "last record's pattern is the file's real content and must match"
         );
+    }
+
+    /// The collision fold is the volume's, never a predicted one: sources
+    /// are keyed by canonical on-disk path, so whether two Unicode
+    /// case-variant dirs fold into one file is the filesystem's answer.
+    /// On NTFS the u-diaeresis pair folds (one file, last content, first
+    /// name); on a case-sensitive filesystem both survive. Either way the
+    /// model must mirror the disk exactly.
+    #[test]
+    fn unicode_collision_model_mirrors_disk() {
+        let base = std::env::temp_dir().join(format!("gitignore-ufold-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&base);
+        std::fs::create_dir_all(&base).unwrap();
+        let recs = vec![
+            Rec::File("s\u{00dc}b/.gitignore".to_string(), b"a.txt\n".to_vec()),
+            Rec::File("s\u{00fc}b/.gitignore".to_string(), b"b.txt\n".to_vec()),
+        ];
+        let res = materialize(&base, &recs);
+        let (repo, matcher, _queries) = res.unwrap();
+        let dirs: Vec<String> = std::fs::read_dir(&repo)
+            .unwrap()
+            .filter_map(|e| {
+                let n = e.unwrap().file_name().to_string_lossy().into_owned();
+                (n != ".git").then_some(n)
+            })
+            .collect();
+        let _ = std::fs::remove_dir_all(&base);
+        if dirs.len() == 1 {
+            assert!(
+                !matcher.is_ignored("s\u{00dc}b/a.txt", false),
+                "folded volume: first record's content was overwritten on disk"
+            );
+            assert!(
+                matcher.is_ignored("s\u{00dc}b/b.txt", false),
+                "folded volume: last content lives under the first name"
+            );
+        } else {
+            assert_eq!(dirs.len(), 2, "unexpected dirs: {dirs:?}");
+            assert!(
+                matcher.is_ignored("s\u{00dc}b/a.txt", false),
+                "distinct volume: first source keeps its own content"
+            );
+            assert!(
+                matcher.is_ignored("s\u{00fc}b/b.txt", false),
+                "distinct volume: second source keeps its own content"
+            );
+        }
     }
 
     /// Empty pattern field and a negation pattern both mean not ignored;
