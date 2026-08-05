@@ -10,6 +10,9 @@ Rules:
 
 ## Now
 
+- [ ] fix-globstar-escaped-slash (Medium, runtime, matcher): glob_match's segment-end test omits wildmatch.c's backslash-slash case, so a/**\/b never crosses directories and disagrees with the oracle. Acceptance: corpus/globstar-infix grown with an a/**\/b case observed failing first, then replaying 0 disagreements.
+- [ ] fix-posix-bracket-classes (Medium, runtime, matcher): class_match lacks POSIX bracket classes, so [[:digit:]].txt disagrees with the oracle in both directions. Acceptance: corpus/char-classes grown with [[:digit:]] cases observed failing first, then replaying 0 disagreements.
+- [ ] fix-bom-skip (Medium, runtime, matcher): parse_source does not skip a UTF-8 BOM at the head of an ignore file, so a BOM-prefixed first pattern never matches. Acceptance: corpus/blank-and-comment grown with a BOM case observed failing first, then replaying 0 disagreements.
 
 ## Next
 
