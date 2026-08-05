@@ -94,6 +94,8 @@ Grown at fix-posix-bracket-classes: char-classes 12 to 15 ([[:digit:]] both dire
 
 Grown at fix-bom-skip: blank-and-comment 4 to 5 (head BOM skipped in .gitignore and info/exclude, mid-file BOM stays literal). Total 95 cases, 250 queries.
 
+Grown at fix-icase-dir-filter: nested-and-layered 10 to 11 (Sub/.gitignore applying to sub/foo.txt under core.ignoreCase, exact-case and unmatched controls). Total 96 cases, 253 queries.
+
 ## Verify command
 Command: `cargo build --release && cargo run --release --bin differential -- --corpus corpus/ --strict`
 
@@ -139,6 +141,7 @@ Regressions: a row that was ticked and later disagrees is a High. Flip its row b
 - A slice that went green as a side effect gets grown with new oracle-blind cases before its row is ticked; never tick on a rubber-stamp replay.
 - Git's semantics live in dir.c call sites as much as in wildmatch (e.g. the match_pathname literal-prefix strip makes the first wildcard run segment-initial); port the composition, never the manpage alone.
 - git init on this machine sets core.ignoreCase=true (NTFS), so every oracle repo matches case-insensitively; the engine ports WM_CASEFOLD (text and plain literals fold, bracket members and escaped literals never fold, ranges try the upcased byte) and the harness mirrors the repo's config into the matcher.
+- WM_CASEFOLD reaches source applicability too: the nested-.gitignore directory-prefix test folds case (dir.c fspathncmp), not only wildmatch.
 - A queried path starting with ':' is reinterpreted by check-ignore as pathspec magic before matching; never author corpus queries with a leading colon.
 
 ## Definition of done

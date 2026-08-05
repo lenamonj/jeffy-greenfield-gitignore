@@ -372,8 +372,10 @@ pub struct Matcher {
     info_exclude: Vec<Pattern>,
     excludes_file: Vec<Pattern>,
     /// Mirror of the repository's core.ignoreCase: when true, matching
-    /// case-folds per wildmatch WM_CASEFOLD, exactly as git dir.c does.
-    /// git init sets it true on case-insensitive filesystems (Windows).
+    /// case-folds per wildmatch WM_CASEFOLD, exactly as git dir.c does,
+    /// including the directory-prefix test that scopes each nested
+    /// `.gitignore` (fspathncmp). git init sets it true on
+    /// case-insensitive filesystems (Windows).
     ignore_case: bool,
 }
 
@@ -404,6 +406,19 @@ impl Matcher {
         self.excludes_file = parse_source(content);
     }
 
+    /// Whether a `.gitignore` in `dir` applies to `path`: `dir` must be a
+    /// proper directory prefix. Folds case under core.ignoreCase, as dir.c
+    /// match_pathname compares the base via fspathncmp (strncmp_icase).
+    fn dir_applies(dir: &str, path: &str, ignore_case: bool) -> bool {
+        if dir.is_empty() {
+            return true;
+        }
+        let (d, p) = (dir.as_bytes(), path.as_bytes());
+        p.len() > d.len()
+            && p[d.len()] == b'/'
+            && if ignore_case { p[..d.len()].eq_ignore_ascii_case(d) } else { &p[..d.len()] == d }
+    }
+
     /// Verdict for one path from the full source stack, or None when no
     /// pattern anywhere matches. `path` must not be judged through an
     /// excluded ancestor here; [`Matcher::is_ignored`] owns that walk.
@@ -412,9 +427,7 @@ impl Matcher {
         let mut applicable: Vec<&(String, Vec<Pattern>)> = self
             .gitignores
             .iter()
-            .filter(|(dir, _)| {
-                dir.is_empty() || path.strip_prefix(dir.as_str()).is_some_and(|r| r.starts_with('/'))
-            })
+            .filter(|(dir, _)| Self::dir_applies(dir, path, self.ignore_case))
             .collect();
         applicable.sort_by_key(|(dir, _)| std::cmp::Reverse(dir.len()));
         for (dir, patterns) in applicable {
@@ -548,6 +561,21 @@ mod tests {
         assert!(glob_match(b"[[:upper:]]x", b"ax", true), "upper accepts lower under icase");
         assert!(!glob_match(b"[[:upper:]]x", b"ax", false));
         assert!(glob_match(b"[[:lower:]]L", b"AL", true));
+    }
+
+    #[test]
+    fn icase_folds_nested_gitignore_dir_prefix() {
+        // Pinned live against the oracle: under core.ignoreCase, a
+        // Sub/.gitignore applies to sub/foo.txt (dir.c fspathncmp).
+        let mut m = Matcher::new();
+        m.add_gitignore("Sub", b"foo.txt\n");
+        m.set_ignore_case(true);
+        assert!(m.is_ignored("sub/foo.txt", false), "prefix folds under icase");
+        assert!(m.is_ignored("Sub/foo.txt", false));
+        assert!(!m.is_ignored("sub/bar.txt", false));
+        let mut cs = Matcher::new();
+        cs.add_gitignore("Sub", b"foo.txt\n");
+        assert!(!cs.is_ignored("sub/foo.txt", false), "case-sensitive default unchanged");
     }
 
     #[test]
