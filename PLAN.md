@@ -76,6 +76,8 @@ Grown at row-anchoring sweep: anchoring 4 to 8 (anchored pattern inside nested .
 
 Grown at row-wildcards sweep: wildcards 5 to 9 (bare star incl dotfile, multi-star backtracking, repeated question marks, star plus class). Total 69 cases, 166 queries.
 
+Grown at row-char-classes sweep: char-classes 7 to 12 (escaped hyphen member, single-char range, class containing slash, negated class with escaped bang, inverted range). Total 74 cases, 178 queries.
+
 ## Verify command
 Command: `cargo build --release && cargo run --release --bin differential -- --corpus corpus/ --strict`
 

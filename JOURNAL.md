@@ -107,3 +107,12 @@ Checkpoint: 1db77f8e8b793425caa376e2809d55e0bf0879b3; PLAN.md row wildcards tick
 Verification: Acceptance: failing-first evidence is iter 4's recorded 8 disagreements on this slice against the stub; grown slice replays 9 cases, 31 queries, 0 disagreements, exit 0. Full Verify: exit 1, 69 cases, 166 queries, 8 disagreements, all in globstar-leading and globstar-infix; red at last checkpoint too, not a regression. Corpus grew 65 to 69, never shrank. cargo test: 4 suites ok. cargo tree: gitignore-matcher alone.
 Learnings: none.
 Next: row-char-classes - green from the engine; grow with oracle-blind class cases before ticking.
+
+## iter 11/12 | cd1c2080-020939 | 2026-08-04 | row-char-classes | done
+
+Task: row-char-classes (High, runtime) - sweep inventory row 7. Slice was green from the glob engine, so grew it 7 to 12 cases first: [a\-c] escaped hyphen as literal member (not a range - bx must not match), [a-a] single-char range, [a/b] class containing a slash member, [!\!] negated class with escaped bang, [z-a] inverted range matching nothing.
+Changed: corpus/char-classes/08-12.case hand-authored; PLAN.md growth line added; BACKLOG.md row line deleted. No source changes - class_match survived all new cases including the inverted range.
+Checkpoint:
+Verification: Acceptance: failing-first evidence is iter 4's recorded 9 disagreements on this slice against the stub; grown slice replays 12 cases, 30 queries, 0 disagreements, exit 0. Full Verify: exit 1, 74 cases, 178 queries, 8 disagreements, all in globstar-leading and globstar-infix; red at last checkpoint too, not a regression. Corpus grew 69 to 74, never shrank. cargo test: 4 suites ok. cargo tree: gitignore-matcher alone.
+Learnings: none.
+Next: iteration 12 is the final iteration - WRAPUP: tidy the ledger and write the handoff; the remaining 5 rows (globstar x3 needing ** implementation, precedence, nested-and-layered) carry to the next run.
