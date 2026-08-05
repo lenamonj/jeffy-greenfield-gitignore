@@ -51,18 +51,18 @@ The rows below are the pattern features enumerated from `gitignore(5)` and are *
 
 A row flips to `- [x] swept at <commit> - <cases run, all agreeing with the oracle>` only when the differential harness replays that row's corpus slice and every case matches. Each row's scope line names the corpus slice that defines it.
 
-- [x] blank-and-comment: blank lines match nothing; `#` starts a comment; `\#` escapes a literal hash. Slice: `corpus/blank-and-comment` - swept at 7a43e72e3210b23e1bc1065daee0244e91dd8cd2 - 5 cases, 11 queries, all agreeing with the oracle
-- [x] trailing-whitespace: trailing spaces are stripped unless backslash-quoted. Slice: `corpus/trailing-whitespace` - swept at 18bf16df780d562bc42b37be586d47534f5beff8 - 8 cases, 18 queries, all agreeing with the oracle
-- [x] negation: `!` re-includes a previously excluded path; `\!` escapes a literal bang. Slice: `corpus/negation` - swept at 18bf16df780d562bc42b37be586d47534f5beff8 - 4 cases, 7 queries, all agreeing with the oracle
-- [x] directory-only: a trailing `/` restricts the match to directories. Slice: `corpus/directory-only` - swept at 144b9a0b8eb17375293b2e0dad8d72dde4fe7ebb - 10 cases, 22 queries, all agreeing with the oracle
-- [x] anchoring: a pattern with a non-trailing `/` is relative to the `.gitignore` location; otherwise it matches at any depth. Slice: `corpus/anchoring` - swept at d705e3fac5d73cd7d7cdc62bb4d39d4c1d870654 - 10 cases, 29 queries, all agreeing with the oracle
-- [x] wildcards: `*` and `?` never cross a `/`. Slice: `corpus/wildcards` - swept at 4e39d2500b95b8b8c7777cfc13aa27846c73eeba - 10 cases, 37 queries, all agreeing with the oracle
-- [x] char-classes: bracket expressions and ranges. Slice: `corpus/char-classes` - swept at a9724c236a660b859fb90111f1220bf6707eb3f4 - 16 cases, 47 queries, all agreeing with the oracle
-- [x] globstar-leading: a leading `**/` matches in all directories. Slice: `corpus/globstar-leading` - swept at 7365453e92a6ea249698ba58a04fedc2abd58e42 - 6 cases, 19 queries, all agreeing with the oracle
-- [x] globstar-trailing: a trailing `/**` matches everything inside. Slice: `corpus/globstar-trailing` - swept at c68865bae65b0f0beea474fb81bb7e18146c3e60 - 6 cases, 19 queries, all agreeing with the oracle
-- [x] globstar-infix: `/**/` matches zero or more directories. Slice: `corpus/globstar-infix` - swept at eee469021ee289f237b0299b1e2fdd853e33be4b - 7 cases, 26 queries, all agreeing with the oracle
-- [x] precedence: the last matching pattern in a file wins. Slice: `corpus/precedence` - swept at 1b32ddc656d40b60dc8c08942b18995450bd58b3 - 7 cases, 14 queries, all agreeing with the oracle
-- [x] nested-and-layered: a `.gitignore` in a subdirectory overrides its parent, and `.git/info/exclude` and `core.excludesFile` layer beneath both. An excluded directory cannot be re-included by negating a file inside it. Slice: `corpus/nested-and-layered` - swept at 1bb9af459c3c5f57092442b92322dee4c93472f0 - 15 cases, 42 queries, all agreeing with the oracle
+- [x] blank-and-comment: blank lines match nothing; `#` starts a comment; `\#` escapes a literal hash. Slice: `corpus/blank-and-comment` - swept at 1d61b81cae37b4241dd11a581715bcce4009a1c0 - 5 cases, 11 queries, all agreeing with the oracle
+- [x] trailing-whitespace: trailing spaces are stripped unless backslash-quoted. Slice: `corpus/trailing-whitespace` - swept at 1d61b81cae37b4241dd11a581715bcce4009a1c0 - 8 cases, 18 queries, all agreeing with the oracle
+- [x] negation: `!` re-includes a previously excluded path; `\!` escapes a literal bang. Slice: `corpus/negation` - swept at 1d61b81cae37b4241dd11a581715bcce4009a1c0 - 4 cases, 7 queries, all agreeing with the oracle
+- [x] directory-only: a trailing `/` restricts the match to directories. Slice: `corpus/directory-only` - swept at 1d61b81cae37b4241dd11a581715bcce4009a1c0 - 10 cases, 22 queries, all agreeing with the oracle
+- [x] anchoring: a pattern with a non-trailing `/` is relative to the `.gitignore` location; otherwise it matches at any depth. Slice: `corpus/anchoring` - swept at 1d61b81cae37b4241dd11a581715bcce4009a1c0 - 10 cases, 29 queries, all agreeing with the oracle
+- [x] wildcards: `*` and `?` never cross a `/`. Slice: `corpus/wildcards` - swept at 1d61b81cae37b4241dd11a581715bcce4009a1c0 - 10 cases, 37 queries, all agreeing with the oracle
+- [x] char-classes: bracket expressions and ranges. Slice: `corpus/char-classes` - swept at 1d61b81cae37b4241dd11a581715bcce4009a1c0 - 16 cases, 47 queries, all agreeing with the oracle
+- [x] globstar-leading: a leading `**/` matches in all directories. Slice: `corpus/globstar-leading` - swept at 1d61b81cae37b4241dd11a581715bcce4009a1c0 - 6 cases, 19 queries, all agreeing with the oracle
+- [x] globstar-trailing: a trailing `/**` matches everything inside. Slice: `corpus/globstar-trailing` - swept at 1d61b81cae37b4241dd11a581715bcce4009a1c0 - 6 cases, 19 queries, all agreeing with the oracle
+- [x] globstar-infix: `/**/` matches zero or more directories. Slice: `corpus/globstar-infix` - swept at 1d61b81cae37b4241dd11a581715bcce4009a1c0 - 7 cases, 26 queries, all agreeing with the oracle
+- [x] precedence: the last matching pattern in a file wins. Slice: `corpus/precedence` - swept at 1d61b81cae37b4241dd11a581715bcce4009a1c0 - 7 cases, 14 queries, all agreeing with the oracle
+- [x] nested-and-layered: a `.gitignore` in a subdirectory overrides its parent, and `.git/info/exclude` and `core.excludesFile` layer beneath both. An excluded directory cannot be re-included by negating a file inside it. Slice: `corpus/nested-and-layered` - swept at 1d61b81cae37b4241dd11a581715bcce4009a1c0 - 15 cases, 42 queries, all agreeing with the oracle
 
 Twelve rows. Each slice's case count is recorded here by the harness once the corpus is frozen, and is never reduced afterwards.
 
