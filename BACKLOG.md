@@ -10,7 +10,6 @@ Rules:
 
 ## Now
 
-- [ ] fix-pathspec-normalization-port (Medium, runtime, matcher-driver): check-ignore runs full pathspec normalization before matching while echoing verbatim, and the driver ports only the leading ./ strip - probed: q=sub/./x.txt and q=sub/../a.log both report ignored (patterns /sub/x.txt at .gitignore:1, /a.log at .gitignore:2) while the matcher, fed the raw query, misses both. Structural: port the remaining normalization (interior ./ collapse, .. resolution, plus any further shape a direct duplicate-slash probe confirms) in one pass. Acceptance: corpus grown with an interior-./ query and a ..-crossing query observed failing first, then replaying 0 disagreements.
 
 
 ## Next
