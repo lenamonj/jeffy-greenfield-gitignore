@@ -1,0 +1,117 @@
+# Plan
+
+## Mode
+Scoped. Build a `.gitignore` pattern matcher in Rust from an empty repository, judged differentially against the real `git check-ignore` binary.
+
+## Goal
+Produce a Rust library and a thin command-line driver that, given a repository tree and its `.gitignore` files, decides for any path whether git would ignore it, and agrees with `git check-ignore` on every case in a frozen corpus.
+
+The oracle is git itself. This project never decides what the right answer is; it only decides what to ask. Where this implementation and git disagree, git is right by definition.
+
+## The oracle contract
+Verified against git 2.50.1.windows.1 during pre-registration. These are facts about the judge, not design choices, and getting any of them wrong silently corrupts every verdict the harness produces.
+
+Invocation:
+
+```
+git check-ignore -z -v --non-matching --no-index --stdin < <NUL-delimited paths>
+```
+
+`-z` requires `--stdin`; the two are used together or not at all. NUL delimiting is mandatory rather than optional, because the corpus contains paths with characters that a line-based or tab-based parse would split wrongly.
+
+Output: four NUL-delimited fields per queried path, in order `source`, `lineno`, `pattern`, `path`. An unmatched path yields three empty fields followed by the path.
+
+Verdict rule, and this is the trap:
+- pattern field empty: no pattern matched, the path is **not ignored**.
+- pattern field begins with `!`: a negation pattern matched, the path is **not ignored**.
+- otherwise: the path is **ignored**.
+
+A harness that treats "appears in `-v` output" as "ignored" is wrong, because `-v` reports negation matches too. Verified: with `*.log` and `!keep.log`, the command reports lines for both `a.log` and `keep.log`, and only `a.log` is ignored.
+
+Exit status: 0 when at least one queried path is ignored, 1 when none are, 128 on error. Exit 128 is a **harness failure, never a verdict**. A run that reads 128 as "not ignored" has a broken gate.
+
+## Operating envelope
+Filled in advance as part of pre-registration. Do not reclassify.
+
+Surfaces:
+- `.gitignore` file contents: user-error - a repository owner hand-authors these. Malformed patterns deserve the same treatment git gives them, which is usually to match nothing rather than to error.
+- The path being queried: user-error - supplied by the caller.
+- The generated corpus: machine-generated - this project's own harness produces it, and the harness's real output is the contract.
+
+Binding rules:
+- A finding exercised only by out-of-envelope input is Low at most.
+- Only the user widens the envelope. An audit that believes this table is wrong files one Proposed item and moves on.
+
+## Surface inventory
+The rows below are the pattern features enumerated from `gitignore(5)` and are **frozen before iteration 1**. No iteration may add, remove, or reword a row.
+
+A row flips to `- [x] swept at <commit> - <cases run, all agreeing with the oracle>` only when the differential harness replays that row's corpus slice and every case matches. Each row's scope line names the corpus slice that defines it.
+
+- [ ] blank-and-comment: blank lines match nothing; `#` starts a comment; `\#` escapes a literal hash. Slice: `corpus/blank-and-comment`
+- [ ] trailing-whitespace: trailing spaces are stripped unless backslash-quoted. Slice: `corpus/trailing-whitespace`
+- [ ] negation: `!` re-includes a previously excluded path; `\!` escapes a literal bang. Slice: `corpus/negation`
+- [ ] directory-only: a trailing `/` restricts the match to directories. Slice: `corpus/directory-only`
+- [ ] anchoring: a pattern with a non-trailing `/` is relative to the `.gitignore` location; otherwise it matches at any depth. Slice: `corpus/anchoring`
+- [ ] wildcards: `*` and `?` never cross a `/`. Slice: `corpus/wildcards`
+- [ ] char-classes: bracket expressions and ranges. Slice: `corpus/char-classes`
+- [ ] globstar-leading: a leading `**/` matches in all directories. Slice: `corpus/globstar-leading`
+- [ ] globstar-trailing: a trailing `/**` matches everything inside. Slice: `corpus/globstar-trailing`
+- [ ] globstar-infix: `/**/` matches zero or more directories. Slice: `corpus/globstar-infix`
+- [ ] precedence: the last matching pattern in a file wins. Slice: `corpus/precedence`
+- [ ] nested-and-layered: a `.gitignore` in a subdirectory overrides its parent, and `.git/info/exclude` and `core.excludesFile` layer beneath both. An excluded directory cannot be re-included by negating a file inside it. Slice: `corpus/nested-and-layered`
+
+Twelve rows. Each slice's case count is recorded here by the harness once the corpus is frozen, and is never reduced afterwards.
+
+## Verify command
+Command: `cargo build --release && cargo run --release --bin differential -- --corpus corpus/ --strict`
+
+The `differential` driver replays every frozen corpus case, asks the oracle for its verdict using the contract above, compares, and exits non-zero on any disagreement. `--strict` makes an oracle exit status of 128 a harness failure rather than a verdict.
+
+Never narrow it to a subset. Never regenerate the corpus smaller. Never pipe it through `head` or `tail`.
+
+## Method
+Build the harness first, then the matcher. The harness is the instrument, and it is worthless if written to fit the implementation.
+
+Corpus discipline, and this is the rule the whole target rests on:
+- The corpus is generated once, early, from the twelve rows above, then **frozen**: written to disk, committed, and never regenerated smaller.
+- Growing the corpus is allowed and encouraged. Shrinking it, or regenerating it in a way that drops cases, is a violation and voids the run.
+- The corpus's size and shape are reported alongside the pass count in every run report. A pass rate over a corpus the run chose is worth less than a pass rate over a corpus the run cannot shrink, and the receipt must let a reader see which one this is.
+
+A task is one inventory row. Its acceptance check is that row's corpus slice replaying with zero disagreements, observed failing first.
+
+Evidence rule: every claim is a command that was run with its real output recorded. The oracle prints the pattern it matched and the line it came from, so a disagreement is always reported with git's own reasoning attached.
+
+Severity rubric, judged against the envelope:
+- High: a disagreement with the oracle on any frozen corpus case, a crash, a hang, or a build failure.
+- Medium: a plausible in-envelope case outside the corpus that disagrees, a silently swallowed error, or documentation contradicting behaviour.
+- Low: polish - naming, style, minor docs.
+
+Class rules: when a disagreement is one instance of a repeatable idiom, fix the class and enumerate every site. The third disagreement sharing one root cause ends instance work and becomes one structural task.
+
+Regressions: a row that was ticked and later disagrees is a High. Flip its row back to unswept and fix it before taking new work.
+
+## Constraints
+
+- **No gitignore-matching dependency.** Not `ignore`, not `gitignore`, not `globset` used as a gitignore engine, not a vendored copy, not a crate that wraps one. Verify with `cargo tree` before every checkpoint. A general-purpose regex crate is permitted for the matcher's internals; a crate that implements gitignore semantics is not.
+- **Never shrink the corpus.** Regenerating it smaller, or filtering out cases that fail, voids the run.
+- **Never treat oracle exit 128 as a verdict.** It is a harness failure.
+- **No special-casing the corpus.** No branch that exists to satisfy a specific named case. The matcher must not be able to tell it is being tested.
+- **No editing the inventory rows.** They are frozen. A disagreement with the row list goes to Proposed.
+- Full implementations only. A stub written to satisfy an acceptance check is a violation, not progress.
+- Keep each change atomic. Never push, never create branches, never rewrite checkpoint history.
+
+## Lessons
+
+## Definition of done
+Convergence requires all of the following simultaneously:
+
+1. `cargo build --release` succeeds with no errors.
+2. The Verify command exits 0 with zero disagreements across the whole frozen corpus, its real output recorded in the declaring iteration's JOURNAL entry.
+3. All 12 inventory rows carry `- [x]` with the commit hash they were swept at.
+4. `cargo tree` shows no gitignore-implementing dependency.
+5. The corpus size is recorded in the JOURNAL and is greater than or equal to every size recorded earlier in the run.
+6. `BACKLOG.md` has zero open tasks in Now, Next, and Later. Every filed finding, Low included, is completed, moved to Declined with a genuine reason, or marked `[b]` with its reason on record.
+7. The adversarial evaluator returned PASS in the declaring iteration, spawned fresh-context, having re-run the Verify command and the closed tasks' acceptance checks.
+8. A line `Converged: <full commit hash> - <date>` is appended under `## Converged` in `BACKLOG.md`.
+
+A run that ends short of this ends out of budget or blocked, and its journal is kept and published exactly as it stands. A partial result is a receipt.
