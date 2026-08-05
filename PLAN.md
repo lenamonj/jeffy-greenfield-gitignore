@@ -60,7 +60,7 @@ A row flips to `- [x] swept at <commit> - <cases run, all agreeing with the orac
 - [x] char-classes: bracket expressions and ranges. Slice: `corpus/char-classes` - swept at 7912a65e559a1c456ed84cb4807e9cf2bf27ac37 - 12 cases, 30 queries, all agreeing with the oracle
 - [x] globstar-leading: a leading `**/` matches in all directories. Slice: `corpus/globstar-leading` - swept at 7365453e92a6ea249698ba58a04fedc2abd58e42 - 6 cases, 19 queries, all agreeing with the oracle
 - [x] globstar-trailing: a trailing `/**` matches everything inside. Slice: `corpus/globstar-trailing` - swept at c68865bae65b0f0beea474fb81bb7e18146c3e60 - 6 cases, 19 queries, all agreeing with the oracle
-- [ ] globstar-infix: `/**/` matches zero or more directories. Slice: `corpus/globstar-infix`
+- [x] globstar-infix: `/**/` matches zero or more directories. Slice: `corpus/globstar-infix` - swept at 149b1b6985016d9b8dbc857efbd921e9a3b81e62 - 6 cases, 22 queries, all agreeing with the oracle
 - [ ] precedence: the last matching pattern in a file wins. Slice: `corpus/precedence`
 - [ ] nested-and-layered: a `.gitignore` in a subdirectory overrides its parent, and `.git/info/exclude` and `core.excludesFile` layer beneath both. An excluded directory cannot be re-included by negating a file inside it. Slice: `corpus/nested-and-layered`
 
