@@ -58,7 +58,7 @@ A row flips to `- [x] swept at <commit> - <cases run, all agreeing with the orac
 - [x] anchoring: a pattern with a non-trailing `/` is relative to the `.gitignore` location; otherwise it matches at any depth. Slice: `corpus/anchoring` - swept at f94168a6335a112962770b6dcf53e96adcb2a854 - 8 cases, 19 queries, all agreeing with the oracle
 - [x] wildcards: `*` and `?` never cross a `/`. Slice: `corpus/wildcards` - swept at 1db77f8e8b793425caa376e2809d55e0bf0879b3 - 9 cases, 31 queries, all agreeing with the oracle
 - [x] char-classes: bracket expressions and ranges. Slice: `corpus/char-classes` - swept at 7912a65e559a1c456ed84cb4807e9cf2bf27ac37 - 12 cases, 30 queries, all agreeing with the oracle
-- [ ] globstar-leading: a leading `**/` matches in all directories. Slice: `corpus/globstar-leading`
+- [x] globstar-leading: a leading `**/` matches in all directories. Slice: `corpus/globstar-leading` - swept at 7365453e92a6ea249698ba58a04fedc2abd58e42 - 6 cases, 19 queries, all agreeing with the oracle
 - [ ] globstar-trailing: a trailing `/**` matches everything inside. Slice: `corpus/globstar-trailing`
 - [ ] globstar-infix: `/**/` matches zero or more directories. Slice: `corpus/globstar-infix`
 - [ ] precedence: the last matching pattern in a file wins. Slice: `corpus/precedence`
@@ -123,6 +123,7 @@ Regressions: a row that was ticked and later disagrees is a High. Flip its row b
 - TMPDIR is unset in this Git Bash; write temp logs to the session scratchpad path, never $TMPDIR.
 - Probe harness failure paths with malformed scratch inputs the corpus cannot contain; the happy path hides bounds bugs.
 - A slice that went green as a side effect gets grown with new oracle-blind cases before its row is ticked; never tick on a rubber-stamp replay.
+- Git's semantics live in dir.c call sites as much as in wildmatch (e.g. the match_pathname literal-prefix strip makes the first wildcard run segment-initial); port the composition, never the manpage alone.
 
 ## Definition of done
 Convergence requires all of the following simultaneously:
