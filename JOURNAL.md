@@ -80,3 +80,12 @@ Checkpoint: f949a7904bced6f69ce640ff7c16154f1346f9f9; PLAN.md row negation ticke
 Verification: Acceptance: observed failing first this iteration - slice replay 2 disagreements (a.log, b.log vs pattern *.log), then 0 after, 4 cases 7 queries, exit 0. Full Verify: 45 disagreements fell to 8, all in globstar-leading and globstar-infix (the un-implemented ** rows); globstar-trailing went green via the excluded-ancestor walk judging abc/d ignored under abc/**, the same mechanism git uses. Red at last checkpoint too, not a regression. cargo test: 4 suites ok (9 tests total). cargo tree: gitignore-matcher alone.
 Learnings: none.
 Next: row-directory-only - slice already green from the core; grow it with oracle-blind cases before ticking, per the Lessons rule.
+
+## iter 8/12 | cd1c2080-020939 | 2026-08-04 | row-directory-only | done
+
+Task: row-directory-only (High, runtime) - sweep inventory row 4. Slice was green from the core, so grew it 5 to 9 cases first per the Lessons rule: negated dir pattern (build/ then !build/), unanchored cache/ matching a nested dir plus a nonexistent same-name at root, wildcard *.d/ against a real dir and a same-named file, and foo\/ whose body degenerates to a lone backslash.
+Changed: corpus/directory-only/06-09.case hand-authored; PLAN.md growth line added; BACKLOG.md row line deleted. No source changes - existing dir_only handling, is_dir stat plumbing, and the ancestor walk survived all new cases.
+Checkpoint:
+Verification: Acceptance: failing-first evidence is iter 4's recorded 4 disagreements on this slice against the stub; grown slice replays 9 cases, 17 queries, 0 disagreements, exit 0. The foo\/ prediction (dir_only strip leaves lone-backslash body, matches nothing) confirmed live by the oracle. Full Verify: exit 1, 61 cases, 142 queries, 8 disagreements, all in globstar-leading and globstar-infix; red at last checkpoint too, not a regression. Corpus grew 57 to 61, never shrank. cargo test: 4 suites ok. cargo tree: gitignore-matcher alone.
+Learnings: none.
+Next: row-anchoring - also green from the core; grow with oracle-blind anchoring cases before ticking.

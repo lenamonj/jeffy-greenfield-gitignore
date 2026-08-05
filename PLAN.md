@@ -70,6 +70,8 @@ Frozen counts, recorded at corpus-freeze: blank-and-comment 4, trailing-whitespa
 
 Grown at row-trailing-whitespace sweep: trailing-whitespace 4 to 8 (multiple escaped spaces, lone trailing backslash, interior spaces, escaped-space-only pattern). Total 57 cases, 132 queries.
 
+Grown at row-directory-only sweep: directory-only 5 to 9 (negated dir pattern, unanchored dir pattern at depth plus nonexistent same-name at root, wildcard dir pattern vs same-named file, escaped trailing slash). Total 61 cases, 142 queries.
+
 ## Verify command
 Command: `cargo build --release && cargo run --release --bin differential -- --corpus corpus/ --strict`
 
