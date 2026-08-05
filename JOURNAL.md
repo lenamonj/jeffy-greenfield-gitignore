@@ -40,7 +40,7 @@ Next: corpus-freeze - generate and freeze the 12 slices, record counts in PLAN.m
 
 Task: corpus-freeze (High, test) - generate and freeze the corpus. Closed: corpus_gen bin wrote 12 slices named exactly per the frozen inventory rows, 53 cases, 123 queries, NUL-terminated token records (F/D/E/X/Q), inputs only - verdicts come from the live oracle at replay. Generator refuses to run when corpus/ exists (freeze guard, observed exit 1 on rerun).
 Changed: src/bin/corpus_gen.rs created; corpus/ (53 case files in 12 dirs) created; PLAN.md frozen counts line added under the inventory; BACKLOG.md corpus-freeze line deleted.
-Checkpoint:
+Checkpoint: 3d1a0d395c65a5de58ac1944b71a708cc35227c3. Stall check: corpus/ (53 files) and corpus_gen.rs created outside state files, corpus-freeze changed state open -> closed, no stall.
 Verification: Acceptance: ls corpus shows the 12 inventory slice names, all non-empty (4/4/4/5/4/5/7/3/3/3/4/7 cases); od -c confirms NUL delimiting with tab and trailing-space bytes intact; counts recorded in PLAN.md. Freeze guard observed: second corpus_gen run exits 1 without touching corpus/. Verify command: still exit 2 (harness stub), red at last checkpoint too, not a regression. cargo tree: gitignore-matcher alone, no gitignore-implementing dependency.
 Learnings: corpus/** -text in .gitattributes was pre-registered and od confirms it: NULs, tabs, and trailing spaces survive byte-exact through git.
 Next: harness - implement the oracle contract in the differential bin; first run must show the stub matcher failing.
