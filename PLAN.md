@@ -92,6 +92,8 @@ Grown at fix-globstar-escaped-slash: globstar-infix 6 to 7 (a/**\/b - escaped sl
 
 Grown at fix-posix-bracket-classes: char-classes 12 to 15 ([[:digit:]] both directions, multiple classes in one bracket, negated POSIX class, unknown class matching nothing, missing :] falling back to a literal set) and wildcards 9 to 10 (case-insensitive literal and range matching under the oracle's core.ignoreCase=true, uppercase bracket member dead under icase). Total 94 cases, 247 queries.
 
+Grown at fix-bom-skip: blank-and-comment 4 to 5 (head BOM skipped in .gitignore and info/exclude, mid-file BOM stays literal). Total 95 cases, 250 queries.
+
 ## Verify command
 Command: `cargo build --release && cargo run --release --bin differential -- --corpus corpus/ --strict`
 

@@ -10,7 +10,6 @@ Rules:
 
 ## Now
 
-- [ ] fix-bom-skip (Medium, runtime, matcher): parse_source does not skip a UTF-8 BOM at the head of an ignore file, so a BOM-prefixed first pattern never matches. Acceptance: corpus/blank-and-comment grown with a BOM case observed failing first, then replaying 0 disagreements.
 
 ## Next
 

@@ -80,6 +80,9 @@ fn parse_line(raw: &str) -> Option<Pattern> {
 }
 
 fn parse_source(content: &[u8]) -> Vec<Pattern> {
+    // dir.c add_patterns_from_buffer skips a UTF-8 BOM at the head of
+    // every ignore source; a BOM anywhere else stays literal bytes.
+    let content = content.strip_prefix(b"\xef\xbb\xbf".as_slice()).unwrap_or(content);
     // Ignore sources are hand-authored text; treat undecodable bytes as
     // lines that match nothing rather than erroring, which is git's
     // effective posture toward malformed patterns.
@@ -454,6 +457,14 @@ mod tests {
         assert!(parse_line("").is_none());
         assert!(parse_line("# a comment").is_none());
         assert!(parse_line("   ").is_none(), "spaces-only trims to blank");
+    }
+
+    #[test]
+    fn head_bom_is_skipped_and_midfile_bom_stays_literal() {
+        let patterns = parse_source(b"\xef\xbb\xbffoo\n\xef\xbb\xbfqux\n");
+        assert_eq!(patterns.len(), 2);
+        assert_eq!(patterns[0].body, "foo", "head BOM stripped");
+        assert_ne!(patterns[1].body, "qux", "mid-file BOM stays in the pattern");
     }
 
     #[test]
