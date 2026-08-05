@@ -94,7 +94,7 @@ Next: row-anchoring - also green from the core; grow with oracle-blind anchoring
 
 Task: row-anchoring (High, runtime) - sweep inventory row 5. Slice was green from the core, so grew it 4 to 8 cases first: doc/frotz inside sub/.gitignore (anchored to the nested file's directory, not the root and not deeper), anchored /*.txt at root only, a/*/c with the star bound to exactly one segment, and anchored dir-only /build/ not matching sub/build.
 Changed: corpus/anchoring/05-08.case hand-authored; PLAN.md growth line added; BACKLOG.md row line deleted. No source changes - the anchoring flag, per-source rel-path computation, and glob engine survived all new cases.
-Checkpoint:
+Checkpoint: f94168a6335a112962770b6dcf53e96adcb2a854; PLAN.md row anchoring ticked with this hash in the bookkeeping edit. Stall check: 4 corpus case files created outside state files, row task closed, no stall.
 Verification: Acceptance: failing-first evidence is iter 4's recorded 5 disagreements on this slice against the stub; grown slice replays 8 cases, 19 queries, 0 disagreements, exit 0. Full Verify: exit 1, 65 cases, 152 queries, 8 disagreements, all in globstar-leading and globstar-infix; red at last checkpoint too, not a regression. Corpus grew 61 to 65, never shrank. cargo test: 4 suites ok. cargo tree: gitignore-matcher alone.
 Learnings: none.
 Next: row-wildcards - green from the glob engine; grow with oracle-blind wildcard cases before ticking.
