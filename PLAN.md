@@ -66,6 +66,8 @@ A row flips to `- [x] swept at <commit> - <cases run, all agreeing with the orac
 
 Twelve rows. Each slice's case count is recorded here by the harness once the corpus is frozen, and is never reduced afterwards.
 
+Frozen counts, recorded at corpus-freeze: blank-and-comment 4, trailing-whitespace 4, negation 4, directory-only 5, anchoring 4, wildcards 5, char-classes 7, globstar-leading 3, globstar-trailing 3, globstar-infix 3, precedence 4, nested-and-layered 7. Total 53 cases, 123 queries.
+
 ## Verify command
 Command: `cargo build --release && cargo run --release --bin differential -- --corpus corpus/ --strict`
 
