@@ -10,7 +10,24 @@ Rules:
 
 ## Now
 
+- [ ] scaffold (High, build-ci, build): No Rust project exists; DoD 1 unmet. Create lib crate `gitignore-matcher` plus `differential` bin stub parsing `--corpus <dir> --strict`. Acceptance: `cargo build --release` exits 0.
+- [ ] corpus-freeze (High, test, corpus): No corpus exists; DoD 2/5 unmet. Generate the 12 slices from the frozen inventory rows, NUL-safe case format, then commit and record per-slice case counts in PLAN.md. Acceptance: `corpus/` committed with 12 non-empty slices named exactly per inventory; counts recorded in PLAN.md.
+- [ ] harness (High, test, oracle): No differential driver exists; DoD 2 unmet. Implement the oracle contract: one temp repo per case outside this tree, `GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null GIT_CONFIG_NOSYSTEM=1` isolation, `-z -v --non-matching --no-index --stdin` invocation, four-field NUL parse, negation-aware verdict rule, exit 128 = harness failure under `--strict`. Acceptance: Verify command replays the whole corpus against the stub matcher, reports each disagreement with git's pattern and source, exits non-zero (observed failing first); a case driving oracle exit 128 aborts as harness failure, never a verdict.
+
 ## Next
+
+- [ ] row-blank-and-comment (High, runtime, matcher): Sweep inventory row 1. Acceptance: `corpus/blank-and-comment` replays with zero disagreements, observed failing first; row ticked with sweep commit.
+- [ ] row-trailing-whitespace (High, runtime, matcher): Sweep inventory row 2. Acceptance: `corpus/trailing-whitespace` replays with zero disagreements, observed failing first; row ticked with sweep commit.
+- [ ] row-negation (High, runtime, matcher): Sweep inventory row 3. Acceptance: `corpus/negation` replays with zero disagreements, observed failing first; row ticked with sweep commit.
+- [ ] row-directory-only (High, runtime, matcher): Sweep inventory row 4. Acceptance: `corpus/directory-only` replays with zero disagreements, observed failing first; row ticked with sweep commit.
+- [ ] row-anchoring (High, runtime, matcher): Sweep inventory row 5. Acceptance: `corpus/anchoring` replays with zero disagreements, observed failing first; row ticked with sweep commit.
+- [ ] row-wildcards (High, runtime, matcher): Sweep inventory row 6. Acceptance: `corpus/wildcards` replays with zero disagreements, observed failing first; row ticked with sweep commit.
+- [ ] row-char-classes (High, runtime, matcher): Sweep inventory row 7. Acceptance: `corpus/char-classes` replays with zero disagreements, observed failing first; row ticked with sweep commit.
+- [ ] row-globstar-leading (High, runtime, matcher): Sweep inventory row 8. Acceptance: `corpus/globstar-leading` replays with zero disagreements, observed failing first; row ticked with sweep commit.
+- [ ] row-globstar-trailing (High, runtime, matcher): Sweep inventory row 9. Acceptance: `corpus/globstar-trailing` replays with zero disagreements, observed failing first; row ticked with sweep commit.
+- [ ] row-globstar-infix (High, runtime, matcher): Sweep inventory row 10. Acceptance: `corpus/globstar-infix` replays with zero disagreements, observed failing first; row ticked with sweep commit.
+- [ ] row-precedence (High, runtime, matcher): Sweep inventory row 11. Acceptance: `corpus/precedence` replays with zero disagreements, observed failing first; row ticked with sweep commit.
+- [ ] row-nested-and-layered (High, runtime, matcher): Sweep inventory row 12. Acceptance: `corpus/nested-and-layered` replays with zero disagreements, observed failing first; row ticked with sweep commit.
 
 ## Later
 
