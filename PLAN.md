@@ -98,6 +98,8 @@ Grown at fix-icase-dir-filter: nested-and-layered 10 to 11 (Sub/.gitignore apply
 
 Grown at fix-posix-space-set: char-classes 15 to 16 (a[[:space:]]b dead at VT and FF per git sane-ctype, space and tab member controls matching). Total 97 cases, 257 queries.
 
+Grown at fix-gitignore-name-case: nested-and-layered 11 to 12 (Sub/.GitIgnore live as a source under core.ignoreCase, hit by cross-case and exact-case queries, unmatched control). Total 98 cases, 260 queries.
+
 ## Verify command
 Command: `cargo build --release && cargo run --release --bin differential -- --corpus corpus/ --strict`
 
@@ -143,7 +145,7 @@ Regressions: a row that was ticked and later disagrees is a High. Flip its row b
 - A slice that went green as a side effect gets grown with new oracle-blind cases before its row is ticked; never tick on a rubber-stamp replay.
 - Git's semantics live in dir.c call sites as much as in wildmatch (e.g. the match_pathname literal-prefix strip makes the first wildcard run segment-initial); port the composition, never the manpage alone.
 - git init on this machine sets core.ignoreCase=true (NTFS), so every oracle repo matches case-insensitively; the engine ports WM_CASEFOLD (text and plain literals fold, bracket members and escaped literals never fold, ranges try the upcased byte) and the harness mirrors the repo's config into the matcher.
-- WM_CASEFOLD reaches source applicability too: the nested-.gitignore directory-prefix test folds case (dir.c fspathncmp), not only wildmatch.
+- WM_CASEFOLD reaches source applicability too: the nested-.gitignore directory-prefix test folds case (dir.c fspathncmp), not only wildmatch - and source-name discovery folds as well, since the filesystem lookup of .gitignore is case-insensitive on an icase filesystem.
 - A queried path starting with ':' is reinterpreted by check-ignore as pathspec magic before matching; never author corpus queries with a leading colon.
 
 ## Definition of done

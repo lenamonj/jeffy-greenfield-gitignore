@@ -198,7 +198,8 @@ fn git_in(dir: &Path, args: &[&str]) -> Result<(), String> {
 /// project's tree) and build the matcher from the same sources. The
 /// matcher mirrors the repository's core.ignoreCase, exactly as dir.c
 /// reads it: git init sets it true on case-insensitive filesystems, and
-/// the oracle's matching folds case there.
+/// the oracle's matching folds case there - including which files count
+/// as ignore sources, since the filesystem name lookup folds too.
 fn materialize(case_dir: &Path, recs: &[Rec]) -> Result<(PathBuf, Matcher, Vec<String>), String> {
     let repo = case_dir.join("repo");
     std::fs::create_dir_all(&repo).map_err(|e| format!("mkdir {}: {e}", repo.display()))?;
@@ -225,11 +226,20 @@ fn materialize(case_dir: &Path, recs: &[Rec]) -> Result<(PathBuf, Matcher, Vec<S
                         .map_err(|e| format!("mkdir {}: {e}", parent.display()))?;
                 }
                 std::fs::write(&full, content).map_err(|e| format!("write {path}: {e}"))?;
-                if let Some(dir) = path
-                    .strip_suffix(".gitignore")
-                    .map(|p| p.strip_suffix('/').unwrap_or(p))
-                    .filter(|p| p.is_empty() || path.ends_with("/.gitignore"))
-                {
+                // git discovers ignore files by asking the filesystem for
+                // "<dir>/.gitignore"; on an ignore_case repo that lookup is
+                // case-insensitive, so a file written as ".GitIgnore" is a
+                // live source there and must reach the matcher too.
+                let (dir, name) = match path.rsplit_once('/') {
+                    Some((d, n)) => (d, n),
+                    None => ("", path.as_str()),
+                };
+                let is_source = if ignore_case {
+                    name.eq_ignore_ascii_case(".gitignore")
+                } else {
+                    name == ".gitignore"
+                };
+                if is_source {
                     matcher.add_gitignore(dir, content);
                 }
             }

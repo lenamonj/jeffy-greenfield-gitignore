@@ -10,8 +10,6 @@ Rules:
 
 ## Now
 
-- [ ] fix-gitignore-name-case (Medium, test, harness): materialize() in the differential driver registers a .gitignore source only on a byte-exact .gitignore suffix, but the oracle discovers ignore files case-insensitively on NTFS, so F Sub/.GitIgnore yields matcher=not-ignored vs oracle=ignored on both cross-case and exact-case queries; third instance of the icase-reach class, so close the class with the comparison-site enumeration. Acceptance: corpus/nested-and-layered grown with a case-variant ignore-file-name case observed failing first, then replaying 0 disagreements, with the site enumeration recorded in the journal.
-
 
 ## Next
 
@@ -25,6 +23,8 @@ Items needing a user decision before any work, one plain line each, never a chec
 ## Settled classes
 
 One line per class: the idiom or defect class, the surface it applies to, and how it was settled - fixed class-complete with its enumerating check, or declined with the reason. Audits must not file findings inside a settled class unless its implementing code changed after settlement.
+
+- icase-reach (matcher and harness): every byte comparison on the verdict path folds under core.ignoreCase - fixed class-complete; sites are wildmatch text matching (WM_CASEFOLD port in glob_match/class_match/prefix strip), nested-.gitignore dir-prefix applicability (dir_applies), and ignore-source name discovery in materialize; each pinned by corpus cases the Verify command replays (wildcards/10, char-classes/13-15, nested-and-layered/11-12) plus unit tests; the oracle echo check is byte-exact by design since git echoes queries verbatim.
 
 ## Declined
 
