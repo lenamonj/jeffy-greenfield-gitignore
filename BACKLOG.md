@@ -10,6 +10,8 @@ Rules:
 
 ## Now
 
+- [ ] fix-gitignore-name-case (Medium, test, harness): materialize() in the differential driver registers a .gitignore source only on a byte-exact .gitignore suffix, but the oracle discovers ignore files case-insensitively on NTFS, so F Sub/.GitIgnore yields matcher=not-ignored vs oracle=ignored on both cross-case and exact-case queries; third instance of the icase-reach class, so close the class with the comparison-site enumeration. Acceptance: corpus/nested-and-layered grown with a case-variant ignore-file-name case observed failing first, then replaying 0 disagreements, with the site enumeration recorded in the journal.
+
 
 ## Next
 
