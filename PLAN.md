@@ -109,6 +109,7 @@ Regressions: a row that was ticked and later disagrees is a High. Flip its row b
 ## Lessons
 
 - TMPDIR is unset in this Git Bash; write temp logs to the session scratchpad path, never $TMPDIR.
+- Probe harness failure paths with malformed scratch inputs the corpus cannot contain; the happy path hides bounds bugs.
 
 ## Definition of done
 Convergence requires all of the following simultaneously:
