@@ -10,8 +10,6 @@ Rules:
 
 ## Now
 
-- [ ] fix-trailing-dot-prefix-overreach (Medium, runtime, matcher): dir_applies canonicalize admits Win32-normalization-only aliases that git's own source open does not honor - reproduced: F sub/.gitignore plain.txt, Q sub./plain.txt and Q sub /plain.txt both matcher=ignored vs oracle=not-ignored (no pattern matched), control sub/plain.txt agreeing. NTFS-level aliases (case fold, 8.3 names) must stay honored. Acceptance: trailing-dot and trailing-space prefix queries observed failing first, then replaying 0 disagreements.
-
 
 
 

@@ -114,6 +114,8 @@ Grown at fix-unicode-source-applicability: nested-and-layered 14 to 15 (cross-ca
 
 Grown at fix-dir-applies-prefix-panic: nested-and-layered 15 to 16 (8.3 short-name alias query reaching a long-named nested source - an NTFS-level alias whose byte length differs from the stored dir - with exact-spelling and unmatched controls in both spellings; on a volume without 8.3 generation the alias resolves nowhere and both sides agree the other way). Total 105 cases, 295 queries.
 
+Grown at fix-trailing-dot-prefix-overreach: nested-and-layered 16 to 17 (trailing-dot and trailing-space prefix spellings that only Win32 normalization would resolve, both dead at the oracle, beside exact-spelling, ASCII case-fold, and unmatched controls). Total 106 cases, 300 queries.
+
 ## Verify command
 Command: `cargo build --release && cargo run --release --bin differential -- --corpus corpus/ --strict`
 
@@ -168,6 +170,7 @@ Regressions: a row that was ticked and later disagrees is a High. Flip its row b
 - The volume's case fold is the NTFS $UpCase table baked in at format time, matching no portable Unicode fold (probed live: u-diaeresis, fullwidth, and sigma pairs fold; sharp-s, dotless-i, Kelvin, final-sigma, supplementary-plane, and NFC/NFD pairs stay distinct); never predict the fold - read the disk back, as materialize does by keying sources on canonical on-disk paths.
 - Two distinct folds live on the verdict path and must never mix: pattern text matching folds ASCII-only against the query's own spelling (WM_CASEFOLD - probed: a non-ASCII pattern matches the byte-equal query and misses the disk-folded variant), while source discovery and applicability fold by the volume's own table through real filesystem lookups (canonicalize).
 - A query prefix admitted by filesystem resolution can differ in byte length from the stored canonical dir (8.3 short names are real NTFS aliases git's opens honor), so source-relative remainders are carved by segment count in the query's own spelling, never by byte offset from a stored spelling.
+- Windows name resolution is layered and git only inherits the NTFS layer: the $UpCase fold and 8.3 short names are real directory entries honored by git's extended-length opens, while Win32 normalization aliases (trailing dots and spaces on a component) are stripped before the filesystem and never reach a source for git - and Rust fs::canonicalize sits on the Win32 layer, so raw canonicalize-equality overreaches git by exactly that difference.
 
 ## Definition of done
 Convergence requires all of the following simultaneously:

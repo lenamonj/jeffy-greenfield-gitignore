@@ -444,6 +444,17 @@ impl Matcher {
             if segs.len() <= depth {
                 return false;
             }
+            // A prefix segment with a trailing dot or space reaches a
+            // directory only through Win32 normalization stripping those
+            // characters before the filesystem sees the name. git opens
+            // paths in extended-length form where no such stripping
+            // happens, so these spellings never reach a source for git
+            // and must not here - unlike NTFS-level aliases (the case
+            // fold, 8.3 short names), which are real directory entries
+            // the resolution below honors.
+            if segs[..depth].iter().any(|s| s.ends_with('.') || s.ends_with(' ')) {
+                return false;
+            }
             let prefix = root.join(segs[..depth].join("/"));
             let src = root.join(dir);
             return match (prefix.canonicalize(), src.canonicalize()) {
@@ -690,6 +701,29 @@ mod tests {
         assert_eq!(via_alias, alias_resolves, "alias reach equals the volume's resolution");
         assert!(!via_alias_unmatched, "carved remainder must be the real basename");
         assert!(exact, "exact spelling reaches the source");
+    }
+
+    #[test]
+    fn win32_normalization_aliases_never_reach_a_source() {
+        // Trailing-dot and trailing-space prefix spellings resolve only
+        // through Win32 normalization, which git's extended-length opens
+        // never perform - they must not apply on any platform (on POSIX
+        // filesystems no such directory exists, so the resolution itself
+        // also answers no). The exact spelling stays live.
+        let base = std::env::temp_dir().join(format!("gitignore-w32-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&base);
+        std::fs::create_dir_all(base.join("sub")).unwrap();
+        let mut m = Matcher::new();
+        m.set_ignore_case(true);
+        m.set_repo_root(&base);
+        m.add_gitignore("sub", b"foo.txt\n");
+        let dot = m.is_ignored("sub./foo.txt", false);
+        let space = m.is_ignored("sub /foo.txt", false);
+        let exact = m.is_ignored("sub/foo.txt", false);
+        let _ = std::fs::remove_dir_all(&base);
+        assert!(!dot, "trailing-dot prefix spelling must not reach the source");
+        assert!(!space, "trailing-space prefix spelling must not reach the source");
+        assert!(exact, "exact spelling stays live");
     }
 
     #[test]
