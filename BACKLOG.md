@@ -10,6 +10,8 @@ Rules:
 
 ## Now
 
+- [ ] fix-trailing-dot-normalization (Medium, runtime, matcher-driver): normalize_query keeps a trailing slash only when the raw query ends with /, but git's textual normalization also yields dir/ when the final segment is . or .. (ghost/. and ghost/x/.. both normalize to ghost/), so dir-only patterns against nonexistent directories flip verdicts - reproduced: matcher=not-ignored vs oracle=ignored (pattern ghost/ at .gitignore:1) on both shapes, controls ghost, ghost/, ghost/./, ghost/x/../ agreeing. Acceptance: corpus grown with final-. and final-.. queries against a dir-only pattern observed failing first, then replaying 0 disagreements.
+
 
 
 ## Next
