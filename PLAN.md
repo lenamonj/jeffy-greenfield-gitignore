@@ -88,6 +88,8 @@ Grown at row-precedence sweep: precedence 4 to 7 (dir-only exclude vs plain nega
 
 Grown at row-nested-and-layered sweep: nested-and-layered 7 to 10 (negation inside an excluded directory stays dead, tree negation overriding core.excludesFile, nested .gitignore with own-directory-anchored pattern plus dir exclusion killing a descendant via the ancestor walk). Total 89 cases, 224 queries.
 
+Grown at fix-globstar-escaped-slash: globstar-infix 6 to 7 (a/**\/b - escaped slash ends the globstar segment and crosses depth, with no zero-directory reading). Total 90 cases, 228 queries.
+
 ## Verify command
 Command: `cargo build --release && cargo run --release --bin differential -- --corpus corpus/ --strict`
 

@@ -155,9 +155,10 @@ fn class_match(p: &[u8], c: u8) -> Option<(usize, bool)> {
 /// FNM_PATHNAME semantics as gitignore uses them: `*` and `?` and bracket
 /// expressions never match `/`; `\x` is literal x; a lone trailing
 /// backslash matches nothing. A `**` run crosses `/` only when it forms a
-/// whole path segment (preceded by start or `/`, followed by end or `/`),
-/// and `**/` also matches zero directories; any other star run behaves as
-/// one plain `*`, per git wildmatch under WM_PATHNAME.
+/// whole path segment (preceded by start or `/`, followed by end, `/`, or
+/// `\/`), and `**/` also matches zero directories - the escaped form `**\/`
+/// crosses slashes but has no zero-directory reading; any other star run
+/// behaves as one plain `*`, per git wildmatch under WM_PATHNAME.
 /// Recursive backtracking; corpus-scale patterns keep it cheap.
 fn glob_match(body: &[u8], text: &[u8]) -> bool {
     let mut pi = 0;
@@ -170,11 +171,14 @@ fn glob_match(body: &[u8], text: &[u8]) -> bool {
                     run_end += 1;
                 }
                 let at_seg_start = pi == 0 || body[pi - 1] == b'/';
-                let at_seg_end = run_end == body.len() || body[run_end] == b'/';
+                let at_seg_end = run_end == body.len()
+                    || body[run_end] == b'/'
+                    || (body[run_end] == b'\\' && body.get(run_end + 1) == Some(&b'/'));
                 let match_slash = run_end - pi >= 2 && at_seg_start && at_seg_end;
                 let rest = &body[run_end..];
-                if match_slash && !rest.is_empty() {
+                if match_slash && rest.first() == Some(&b'/') {
                     // `**/`: the zero-directory reading skips the slash too.
+                    // wildmatch grants it only to the literal `/`, never `\/`.
                     if glob_match(&rest[1..], &text[ti..]) {
                         return true;
                     }
@@ -418,6 +422,9 @@ mod tests {
         assert!(!glob_match(b"a**b", b"a/b"), "adjacent ** must not cross /");
         assert!(!glob_match(b"x**/foo", b"x/a/foo"), "wildmatch alone: not special");
         assert!(glob_match(b"x**/foo", b"xa/foo"));
+        assert!(glob_match(br"a/**\/b", b"a/x/b"), "escaped slash ends the segment");
+        assert!(glob_match(br"a/**\/b", b"a/x/y/b"), "escaped-slash ** crosses depth");
+        assert!(!glob_match(br"a/**\/b", b"a/b"), "no zero-dir reading for **\\/");
     }
 
     #[test]
