@@ -195,12 +195,26 @@ fn git_in(dir: &Path, args: &[&str]) -> Result<(), String> {
 }
 
 /// Materialize a case as its own temporary repository (never inside this
-/// project's tree) and build the matcher from the same sources.
+/// project's tree) and build the matcher from the same sources. The
+/// matcher mirrors the repository's core.ignoreCase, exactly as dir.c
+/// reads it: git init sets it true on case-insensitive filesystems, and
+/// the oracle's matching folds case there.
 fn materialize(case_dir: &Path, recs: &[Rec]) -> Result<(PathBuf, Matcher, Vec<String>), String> {
     let repo = case_dir.join("repo");
     std::fs::create_dir_all(&repo).map_err(|e| format!("mkdir {}: {e}", repo.display()))?;
     git_in(case_dir, &["init", "-q", "repo"])?;
+    let ignore_case = {
+        let out = Command::new("git")
+            .args(["config", "--get", "core.ignorecase"])
+            .current_dir(&repo)
+            .envs(ORACLE_ENV)
+            .output()
+            .map_err(|e| format!("spawning git config: {e}"))?;
+        // Exit 1 means unset, which is git's case-sensitive default.
+        String::from_utf8_lossy(&out.stdout).trim() == "true"
+    };
     let mut matcher = Matcher::new();
+    matcher.set_ignore_case(ignore_case);
     let mut queries = Vec::new();
     for rec in recs {
         match rec {

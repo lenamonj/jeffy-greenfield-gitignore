@@ -90,12 +90,39 @@ fn parse_source(content: &[u8]) -> Vec<Pattern> {
         .collect()
 }
 
+/// ASCII classification for a POSIX bracket class name, per git
+/// wildmatch.c; None for an unknown name, which makes the whole pattern
+/// match nothing. `c` arrives already case-folded; under `icase` the
+/// upper class also accepts lowercase, exactly as WM_CASEFOLD does.
+fn posix_class_matches(name: &[u8], c: u8, icase: bool) -> Option<bool> {
+    let m = match name {
+        b"alnum" => c.is_ascii_alphanumeric(),
+        b"alpha" => c.is_ascii_alphabetic(),
+        b"blank" => c == b' ' || c == b'\t',
+        b"cntrl" => c.is_ascii_control(),
+        b"digit" => c.is_ascii_digit(),
+        b"graph" => c.is_ascii_graphic(),
+        b"lower" => c.is_ascii_lowercase(),
+        b"print" => c == b' ' || c.is_ascii_graphic(),
+        b"punct" => c.is_ascii_punctuation(),
+        b"space" => c.is_ascii_whitespace() || c == 0x0b,
+        b"upper" => c.is_ascii_uppercase() || (icase && c.is_ascii_lowercase()),
+        b"xdigit" => c.is_ascii_hexdigit(),
+        _ => return None,
+    };
+    Some(m)
+}
+
 /// Parse a bracket expression starting at `p[0] == b'['` and test `c`
 /// against it. Returns (bytes consumed, matched-after-negation), or None
-/// for an unclosed class, which matches nothing, matching git's posture
-/// toward malformed patterns. `!` and `^` both negate; a `]` first in the
-/// member list is literal; `a-z` ranges and backslash escapes apply.
-fn class_match(p: &[u8], c: u8) -> Option<(usize, bool)> {
+/// for an unclosed class or unknown POSIX class name, which matches
+/// nothing, matching git's posture toward malformed patterns. `!` and `^`
+/// both negate; a `]` first in the member list is literal; `a-z` ranges,
+/// `[:name:]` POSIX classes, and backslash escapes apply. `c` arrives
+/// already case-folded; per wildmatch, literal members are never folded
+/// (an uppercase member is dead under icase) while ranges also try the
+/// upcased text byte.
+fn class_match(p: &[u8], c: u8, icase: bool) -> Option<(usize, bool)> {
     let mut i = 1;
     let mut negate = false;
     if i < p.len() && (p[i] == b'!' || p[i] == b'^') {
@@ -126,12 +153,42 @@ fn class_match(p: &[u8], c: u8) -> Option<(usize, bool)> {
             } else {
                 p[i]
             };
-            if prev.unwrap() <= c && c <= hi {
+            let lo = prev.unwrap();
+            if lo <= c && c <= hi {
                 matched = true;
+            } else if icase && c.is_ascii_lowercase() {
+                let cu = c.to_ascii_uppercase();
+                if lo <= cu && cu <= hi {
+                    matched = true;
+                }
             }
             prev = None;
             i += 1;
             continue;
+        }
+        if raw == b'[' && p.get(i + 1) == Some(&b':') {
+            // POSIX named class, per wildmatch.c: scan to the first ]
+            // after [:; without a ":]" ending there, [ stays an ordinary
+            // member and the name characters parse as members too.
+            match p[i + 2..].iter().position(|b| *b == b']') {
+                Some(off) => {
+                    let j = i + 2 + off;
+                    if j > i + 2 && p[j - 1] == b':' {
+                        match posix_class_matches(&p[i + 2..j - 1], c, icase) {
+                            Some(m) => {
+                                if m {
+                                    matched = true;
+                                }
+                                prev = None;
+                                i = j + 1;
+                                continue;
+                            }
+                            None => return None,
+                        }
+                    }
+                }
+                None => return None,
+            }
         }
         let lit = if raw == b'\\' {
             i += 1;
@@ -159,8 +216,12 @@ fn class_match(p: &[u8], c: u8) -> Option<(usize, bool)> {
 /// `\/`), and `**/` also matches zero directories - the escaped form `**\/`
 /// crosses slashes but has no zero-directory reading; any other star run
 /// behaves as one plain `*`, per git wildmatch under WM_PATHNAME.
+/// Under `icase` (WM_CASEFOLD, git's core.ignoreCase), text bytes and
+/// plain pattern literals fold to lowercase; escaped literals and bracket
+/// members are read outside wildmatch's fold and stay exact.
 /// Recursive backtracking; corpus-scale patterns keep it cheap.
-fn glob_match(body: &[u8], text: &[u8]) -> bool {
+fn glob_match(body: &[u8], text: &[u8], icase: bool) -> bool {
+    let fold = |b: u8| if icase { b.to_ascii_lowercase() } else { b };
     let mut pi = 0;
     let mut ti = 0;
     while pi < body.len() {
@@ -179,7 +240,7 @@ fn glob_match(body: &[u8], text: &[u8]) -> bool {
                 if match_slash && rest.first() == Some(&b'/') {
                     // `**/`: the zero-directory reading skips the slash too.
                     // wildmatch grants it only to the literal `/`, never `\/`.
-                    if glob_match(&rest[1..], &text[ti..]) {
+                    if glob_match(&rest[1..], &text[ti..], icase) {
                         return true;
                     }
                 }
@@ -188,7 +249,7 @@ fn glob_match(body: &[u8], text: &[u8]) -> bool {
                 }
                 let mut k = ti;
                 loop {
-                    if glob_match(rest, &text[k..]) {
+                    if glob_match(rest, &text[k..], icase) {
                         return true;
                     }
                     if k >= text.len() || (!match_slash && text[k] == b'/') {
@@ -208,7 +269,7 @@ fn glob_match(body: &[u8], text: &[u8]) -> bool {
                 if ti >= text.len() || text[ti] == b'/' {
                     return false;
                 }
-                match class_match(&body[pi..], text[ti]) {
+                match class_match(&body[pi..], fold(text[ti]), icase) {
                     Some((consumed, m)) => {
                         if !m {
                             return false;
@@ -223,14 +284,14 @@ fn glob_match(body: &[u8], text: &[u8]) -> bool {
                 if pi + 1 >= body.len() {
                     return false;
                 }
-                if ti >= text.len() || text[ti] != body[pi + 1] {
+                if ti >= text.len() || fold(text[ti]) != body[pi + 1] {
                     return false;
                 }
                 pi += 2;
                 ti += 1;
             }
             ch => {
-                if ti >= text.len() || text[ti] != ch {
+                if ti >= text.len() || fold(text[ti]) != fold(ch) {
                     return false;
                 }
                 pi += 1;
@@ -253,36 +314,44 @@ fn no_wildcard_len(body: &[u8]) -> usize {
         .unwrap_or(body.len())
 }
 
-fn pattern_matches(p: &Pattern, rel: &str, is_dir: bool) -> bool {
+fn pattern_matches(p: &Pattern, rel: &str, is_dir: bool, icase: bool) -> bool {
     if p.dir_only && !is_dir {
         return false;
     }
     if !p.anchored {
-        return glob_match(p.body.as_bytes(), basename(rel).as_bytes());
+        return glob_match(p.body.as_bytes(), basename(rel).as_bytes(), icase);
     }
     // Port of git dir.c match_pathname: the literal prefix is compared
-    // outright and stripped before globbing. The strip is semantic, not
-    // just a fast path: a `**` first wildcard then sits at the start of
-    // what wildmatch sees and crosses slashes even when the prefix ends
+    // outright (case-insensitively under icase, per strncmp_icase) and
+    // stripped before globbing. The strip is semantic, not just a fast
+    // path: a `**` first wildcard then sits at the start of what
+    // wildmatch sees and crosses slashes even when the prefix ends
     // mid-segment, so `x**/foo` matches `x/a/foo` and `xfoo`.
     let body = p.body.as_bytes();
     let rel = rel.as_bytes();
     let prefix = no_wildcard_len(body);
-    if prefix > rel.len() || body[..prefix] != rel[..prefix] {
+    let eq = |a: &[u8], b: &[u8]| {
+        if icase {
+            a.eq_ignore_ascii_case(b)
+        } else {
+            a == b
+        }
+    };
+    if prefix > rel.len() || !eq(&body[..prefix], &rel[..prefix]) {
         return false;
     }
     if prefix == body.len() {
         return prefix == rel.len();
     }
-    glob_match(&body[prefix..], &rel[prefix..])
+    glob_match(&body[prefix..], &rel[prefix..], icase)
 }
 
 /// Last matching pattern in one source decides for that source; None when
 /// nothing in the source matches.
-fn last_match(patterns: &[Pattern], rel: &str, is_dir: bool) -> Option<bool> {
+fn last_match(patterns: &[Pattern], rel: &str, is_dir: bool, icase: bool) -> Option<bool> {
     let mut verdict = None;
     for p in patterns {
-        if pattern_matches(p, rel, is_dir) {
+        if pattern_matches(p, rel, is_dir, icase) {
             verdict = Some(!p.negated);
         }
     }
@@ -299,11 +368,21 @@ pub struct Matcher {
     gitignores: Vec<(String, Vec<Pattern>)>,
     info_exclude: Vec<Pattern>,
     excludes_file: Vec<Pattern>,
+    /// Mirror of the repository's core.ignoreCase: when true, matching
+    /// case-folds per wildmatch WM_CASEFOLD, exactly as git dir.c does.
+    /// git init sets it true on case-insensitive filesystems (Windows).
+    ignore_case: bool,
 }
 
 impl Matcher {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Set whether matching folds case, mirroring the repository's
+    /// core.ignoreCase. Defaults to false, git's own default.
+    pub fn set_ignore_case(&mut self, ignore_case: bool) {
+        self.ignore_case = ignore_case;
     }
 
     /// Register a `.gitignore` found in `dir` (repo-relative, `/`-separated,
@@ -337,14 +416,14 @@ impl Matcher {
         applicable.sort_by_key(|(dir, _)| std::cmp::Reverse(dir.len()));
         for (dir, patterns) in applicable {
             let rel = if dir.is_empty() { path } else { &path[dir.len() + 1..] };
-            if let Some(ignored) = last_match(patterns, rel, is_dir) {
+            if let Some(ignored) = last_match(patterns, rel, is_dir, self.ignore_case) {
                 return Some(ignored);
             }
         }
-        if let Some(ignored) = last_match(&self.info_exclude, path, is_dir) {
+        if let Some(ignored) = last_match(&self.info_exclude, path, is_dir, self.ignore_case) {
             return Some(ignored);
         }
-        if let Some(ignored) = last_match(&self.excludes_file, path, is_dir) {
+        if let Some(ignored) = last_match(&self.excludes_file, path, is_dir, self.ignore_case) {
             return Some(ignored);
         }
         None
@@ -380,51 +459,51 @@ mod tests {
     #[test]
     fn escaped_hash_is_a_literal_pattern() {
         let p = parse_line("\\#hash").expect("escaped hash is a pattern");
-        assert!(glob_match(p.body.as_bytes(), b"#hash"));
-        assert!(!glob_match(p.body.as_bytes(), b"hash"));
+        assert!(glob_match(p.body.as_bytes(), b"#hash", false));
+        assert!(!glob_match(p.body.as_bytes(), b"hash", false));
     }
 
     #[test]
     fn glob_star_and_question_never_cross_slash() {
-        assert!(glob_match(b"*.log", b"a.log"));
-        assert!(!glob_match(b"*.log", b"sub/a.log"), "* must not cross /");
-        assert!(glob_match(b"a?c", b"abc"));
-        assert!(!glob_match(b"a?c", b"a/c"), "? must not cross /");
-        assert!(glob_match(b"sub/*.txt", b"sub/a.txt"));
-        assert!(!glob_match(b"sub/*.txt", b"sub/d/b.txt"));
+        assert!(glob_match(b"*.log", b"a.log", false));
+        assert!(!glob_match(b"*.log", b"sub/a.log", false), "* must not cross /");
+        assert!(glob_match(b"a?c", b"abc", false));
+        assert!(!glob_match(b"a?c", b"a/c", false), "? must not cross /");
+        assert!(glob_match(b"sub/*.txt", b"sub/a.txt", false));
+        assert!(!glob_match(b"sub/*.txt", b"sub/d/b.txt", false));
     }
 
     #[test]
     fn glob_classes_and_escapes() {
-        assert!(glob_match(b"[abc].txt", b"a.txt"));
-        assert!(!glob_match(b"[abc].txt", b"d.txt"));
-        assert!(glob_match(b"[!a-c].txt", b"d.txt"));
-        assert!(!glob_match(b"[!a-c].txt", b"a.txt"));
-        assert!(glob_match(b"[]-]x", b"]x"), "leading ] is a literal member");
-        assert!(glob_match(b"[]-]x", b"-x"));
-        assert!(!glob_match(b"[]-]x", b"ax"));
-        assert!(glob_match(b"\\*.lit", b"*.lit"), "escaped star is literal");
-        assert!(!glob_match(b"\\*.lit", b"a.lit"));
-        assert!(!glob_match(b"[abc", b"a"), "unclosed class matches nothing");
+        assert!(glob_match(b"[abc].txt", b"a.txt", false));
+        assert!(!glob_match(b"[abc].txt", b"d.txt", false));
+        assert!(glob_match(b"[!a-c].txt", b"d.txt", false));
+        assert!(!glob_match(b"[!a-c].txt", b"a.txt", false));
+        assert!(glob_match(b"[]-]x", b"]x", false), "leading ] is a literal member");
+        assert!(glob_match(b"[]-]x", b"-x", false));
+        assert!(!glob_match(b"[]-]x", b"ax", false));
+        assert!(glob_match(b"\\*.lit", b"*.lit", false), "escaped star is literal");
+        assert!(!glob_match(b"\\*.lit", b"a.lit", false));
+        assert!(!glob_match(b"[abc", b"a", false), "unclosed class matches nothing");
     }
 
     #[test]
     fn globstar_is_special_only_as_a_whole_segment() {
-        assert!(glob_match(b"**/foo", b"foo"), "leading **/ matches zero dirs");
-        assert!(glob_match(b"**/foo", b"a/b/foo"));
-        assert!(!glob_match(b"**/foo", b"xfoo"));
-        assert!(glob_match(b"a/**/b", b"a/b"), "infix /**/ matches zero dirs");
-        assert!(glob_match(b"a/**/b", b"a/x/y/b"));
-        assert!(glob_match(b"abc/**", b"abc/d/e"), "trailing /** swallows depth");
-        assert!(!glob_match(b"abc/**", b"abc"), "trailing /** needs content");
-        assert!(glob_match(b"**", b"a"), "bare ** matches anything");
-        assert!(glob_match(b"a**b", b"axyb"), "adjacent ** is a plain *");
-        assert!(!glob_match(b"a**b", b"a/b"), "adjacent ** must not cross /");
-        assert!(!glob_match(b"x**/foo", b"x/a/foo"), "wildmatch alone: not special");
-        assert!(glob_match(b"x**/foo", b"xa/foo"));
-        assert!(glob_match(br"a/**\/b", b"a/x/b"), "escaped slash ends the segment");
-        assert!(glob_match(br"a/**\/b", b"a/x/y/b"), "escaped-slash ** crosses depth");
-        assert!(!glob_match(br"a/**\/b", b"a/b"), "no zero-dir reading for **\\/");
+        assert!(glob_match(b"**/foo", b"foo", false), "leading **/ matches zero dirs");
+        assert!(glob_match(b"**/foo", b"a/b/foo", false));
+        assert!(!glob_match(b"**/foo", b"xfoo", false));
+        assert!(glob_match(b"a/**/b", b"a/b", false), "infix /**/ matches zero dirs");
+        assert!(glob_match(b"a/**/b", b"a/x/y/b", false));
+        assert!(glob_match(b"abc/**", b"abc/d/e", false), "trailing /** swallows depth");
+        assert!(!glob_match(b"abc/**", b"abc", false), "trailing /** needs content");
+        assert!(glob_match(b"**", b"a", false), "bare ** matches anything");
+        assert!(glob_match(b"a**b", b"axyb", false), "adjacent ** is a plain *");
+        assert!(!glob_match(b"a**b", b"a/b", false), "adjacent ** must not cross /");
+        assert!(!glob_match(b"x**/foo", b"x/a/foo", false), "wildmatch alone: not special");
+        assert!(glob_match(b"x**/foo", b"xa/foo", false));
+        assert!(glob_match(br"a/**\/b", b"a/x/b", false), "escaped slash ends the segment");
+        assert!(glob_match(br"a/**\/b", b"a/x/y/b", false), "escaped-slash ** crosses depth");
+        assert!(!glob_match(br"a/**\/b", b"a/b", false), "no zero-dir reading for **\\/");
     }
 
     #[test]
@@ -432,10 +511,32 @@ mod tests {
         // dir.c match_pathname strips the literal prefix before wildmatch,
         // so at the pattern level x**/foo is x + **/foo, not x*/foo.
         let p = parse_line("x**/foo").expect("pattern parses");
-        assert!(pattern_matches(&p, "x/a/foo", false), "strip exposes leading **");
-        assert!(pattern_matches(&p, "xfoo", false), "**/ then matches zero dirs");
-        assert!(pattern_matches(&p, "xa/foo", false));
-        assert!(!pattern_matches(&p, "y/a/foo", false), "literal prefix must match");
+        assert!(pattern_matches(&p, "x/a/foo", false, false), "strip exposes leading **");
+        assert!(pattern_matches(&p, "xfoo", false, false), "**/ then matches zero dirs");
+        assert!(pattern_matches(&p, "xa/foo", false, false));
+        assert!(!pattern_matches(&p, "y/a/foo", false, false), "literal prefix must match");
+    }
+
+    #[test]
+    fn posix_classes_and_casefold() {
+        assert!(glob_match(b"[[:digit:]].txt", b"5.txt", false));
+        assert!(!glob_match(b"[[:digit:]].txt", b"d].txt", false));
+        assert!(!glob_match(b"[[:bogus:]]z", b"5z", false), "unknown class matches nothing");
+        assert!(glob_match(b"[[:digit]w", b"dw", false), "no :] ending falls back to a literal set");
+        assert!(!glob_match(b"[[:digit]w", b"5w", false));
+        assert!(glob_match(b"[![:space:]]y", b"ay", false));
+        assert!(!glob_match(b"[![:space:]]y", b" y", false));
+        // Casefold semantics pinned live against the oracle (core.ignoreCase
+        // repos): literals and ranges fold, bracket members do not.
+        assert!(glob_match(b"K.txt", b"k.txt", true), "icase folds plain literals");
+        assert!(!glob_match(b"K.txt", b"k.txt", false));
+        assert!(glob_match(b"ra[m-p]q", b"raNq", true), "icase range tries the upcased byte");
+        assert!(glob_match(b"u[A-C]v", b"ubv", true));
+        assert!(!glob_match(b"x[K]y", b"xKy", true), "uppercase bracket member is dead under icase");
+        assert!(glob_match(b"z[k]w", b"zKw", true));
+        assert!(glob_match(b"[[:upper:]]x", b"ax", true), "upper accepts lower under icase");
+        assert!(!glob_match(b"[[:upper:]]x", b"ax", false));
+        assert!(glob_match(b"[[:lower:]]L", b"AL", true));
     }
 
     #[test]

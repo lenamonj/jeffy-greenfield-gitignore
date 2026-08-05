@@ -90,6 +90,8 @@ Grown at row-nested-and-layered sweep: nested-and-layered 7 to 10 (negation insi
 
 Grown at fix-globstar-escaped-slash: globstar-infix 6 to 7 (a/**\/b - escaped slash ends the globstar segment and crosses depth, with no zero-directory reading). Total 90 cases, 228 queries.
 
+Grown at fix-posix-bracket-classes: char-classes 12 to 15 ([[:digit:]] both directions, multiple classes in one bracket, negated POSIX class, unknown class matching nothing, missing :] falling back to a literal set) and wildcards 9 to 10 (case-insensitive literal and range matching under the oracle's core.ignoreCase=true, uppercase bracket member dead under icase). Total 94 cases, 247 queries.
+
 ## Verify command
 Command: `cargo build --release && cargo run --release --bin differential -- --corpus corpus/ --strict`
 
@@ -134,6 +136,8 @@ Regressions: a row that was ticked and later disagrees is a High. Flip its row b
 - Probe harness failure paths with malformed scratch inputs the corpus cannot contain; the happy path hides bounds bugs.
 - A slice that went green as a side effect gets grown with new oracle-blind cases before its row is ticked; never tick on a rubber-stamp replay.
 - Git's semantics live in dir.c call sites as much as in wildmatch (e.g. the match_pathname literal-prefix strip makes the first wildcard run segment-initial); port the composition, never the manpage alone.
+- git init on this machine sets core.ignoreCase=true (NTFS), so every oracle repo matches case-insensitively; the engine ports WM_CASEFOLD (text and plain literals fold, bracket members and escaped literals never fold, ranges try the upcased byte) and the harness mirrors the repo's config into the matcher.
+- A queried path starting with ':' is reinterpreted by check-ignore as pathspec magic before matching; never author corpus queries with a leading colon.
 
 ## Definition of done
 Convergence requires all of the following simultaneously:
