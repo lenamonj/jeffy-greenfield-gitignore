@@ -62,7 +62,7 @@ A row flips to `- [x] swept at <commit> - <cases run, all agreeing with the orac
 - [x] globstar-trailing: a trailing `/**` matches everything inside. Slice: `corpus/globstar-trailing` - swept at c68865bae65b0f0beea474fb81bb7e18146c3e60 - 6 cases, 19 queries, all agreeing with the oracle
 - [x] globstar-infix: `/**/` matches zero or more directories. Slice: `corpus/globstar-infix` - swept at eee469021ee289f237b0299b1e2fdd853e33be4b - 7 cases, 26 queries, all agreeing with the oracle
 - [x] precedence: the last matching pattern in a file wins. Slice: `corpus/precedence` - swept at 1b32ddc656d40b60dc8c08942b18995450bd58b3 - 7 cases, 14 queries, all agreeing with the oracle
-- [x] nested-and-layered: a `.gitignore` in a subdirectory overrides its parent, and `.git/info/exclude` and `core.excludesFile` layer beneath both. An excluded directory cannot be re-included by negating a file inside it. Slice: `corpus/nested-and-layered` - swept at e32a1fe91287c58a6165ff0af3434992f5683f91 - 14 cases, 37 queries, all agreeing with the oracle
+- [x] nested-and-layered: a `.gitignore` in a subdirectory overrides its parent, and `.git/info/exclude` and `core.excludesFile` layer beneath both. An excluded directory cannot be re-included by negating a file inside it. Slice: `corpus/nested-and-layered` - swept at 1bb9af459c3c5f57092442b92322dee4c93472f0 - 15 cases, 42 queries, all agreeing with the oracle
 
 Twelve rows. Each slice's case count is recorded here by the harness once the corpus is frozen, and is never reduced afterwards.
 
