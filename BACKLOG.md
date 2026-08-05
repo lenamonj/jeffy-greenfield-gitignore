@@ -35,3 +35,5 @@ Findings judged not worth fixing, one line each with the reason. Audits must not
 ## Converged
 
 One line per convergence, appended, never rewritten: Converged: <full commit hash> - <date>. The ratchet reads the latest line here.
+
+Converged: ab3f17e4bb5753d5df248f429b40d63682290070 - 2026-08-05
