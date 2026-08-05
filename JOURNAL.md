@@ -62,3 +62,12 @@ Checkpoint: c7c8c158b5e6b224d3247a438973038572ab62ef; PLAN.md row blank-and-comm
 Verification: Acceptance observed failing first this iteration: slice replay 3 disagreements against the stub (a.txt, note, escaped \#hash), then 0 disagreements after, exit 0, 4 cases 8 queries. cargo test: 5 passed across lib and harness (parse edges, trim port incl tab-not-trimmed, oracle contract pins). Full Verify: exit 1 with 45 disagreements (was 69) - red at last checkpoint too, not a regression; anchoring, directory-only, trailing-whitespace slices went green as core side effects, their rows stay unticked pending their own sweep iterations. cargo tree: gitignore-matcher alone.
 Learnings: none.
 Next: row-trailing-whitespace - slice already shows 0 disagreements from the trim port; sweep and tick it.
+
+## iter 6/12 | cd1c2080-020939 | 2026-08-04 | row-trailing-whitespace | done
+
+Task: row-trailing-whitespace (High, runtime) - sweep inventory row 2. The slice went green as a side effect of iter 5's trim port, so a bare replay would rubber-stamp; grew the slice from 4 to 8 cases first (two escaped trailing spaces, lone trailing backslash, interior spaces with trailing trim, escaped-space-only pattern vs a single-space path), then swept.
+Changed: corpus/trailing-whitespace/05-08.case hand-authored per the NUL token format (od-verified); PLAN.md growth line added under frozen counts; BACKLOG.md row line deleted. No source changes - the existing trim port survived all new cases.
+Checkpoint:
+Verification: Acceptance: failing-first evidence is iter 4's recorded 4 disagreements on this slice against the stub; grown slice replays 8 cases, 18 queries, 0 disagreements, exit 0 - including the genuinely new cases the matcher had never seen. Full Verify: exit 1, 57 cases, 132 queries, 45 disagreements (unchanged set, all in glob-engine slices), red at last checkpoint too, not a regression. Corpus grew 53 to 57 cases, never shrank. cargo test: 4 suites ok. cargo tree: gitignore-matcher alone.
+Learnings: Growing a green slice before ticking its row turns a rubber-stamp sweep into a real one; the growth cases are chosen blind to the implementation (oracle decides), so agreement is evidence, not tautology.
+Next: row-negation - slice shows 2 disagreements; needs * wildcard support in the glob engine.

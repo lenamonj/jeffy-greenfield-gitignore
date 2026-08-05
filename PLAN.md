@@ -68,6 +68,8 @@ Twelve rows. Each slice's case count is recorded here by the harness once the co
 
 Frozen counts, recorded at corpus-freeze: blank-and-comment 4, trailing-whitespace 4, negation 4, directory-only 5, anchoring 4, wildcards 5, char-classes 7, globstar-leading 3, globstar-trailing 3, globstar-infix 3, precedence 4, nested-and-layered 7. Total 53 cases, 123 queries.
 
+Grown at row-trailing-whitespace sweep: trailing-whitespace 4 to 8 (multiple escaped spaces, lone trailing backslash, interior spaces, escaped-space-only pattern). Total 57 cases, 132 queries.
+
 ## Verify command
 Command: `cargo build --release && cargo run --release --bin differential -- --corpus corpus/ --strict`
 

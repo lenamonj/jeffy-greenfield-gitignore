@@ -13,7 +13,6 @@ Rules:
 
 ## Next
 
-- [ ] row-trailing-whitespace (High, runtime, matcher): Sweep inventory row 2. Acceptance: `corpus/trailing-whitespace` replays with zero disagreements, observed failing first; row ticked with sweep commit.
 - [ ] row-negation (High, runtime, matcher): Sweep inventory row 3. Acceptance: `corpus/negation` replays with zero disagreements, observed failing first; row ticked with sweep commit.
 - [ ] row-directory-only (High, runtime, matcher): Sweep inventory row 4. Acceptance: `corpus/directory-only` replays with zero disagreements, observed failing first; row ticked with sweep commit.
 - [ ] row-anchoring (High, runtime, matcher): Sweep inventory row 5. Acceptance: `corpus/anchoring` replays with zero disagreements, observed failing first; row ticked with sweep commit.
