@@ -100,6 +100,8 @@ Grown at fix-posix-space-set: char-classes 15 to 16 (a[[:space:]]b dead at VT an
 
 Grown at fix-gitignore-name-case: nested-and-layered 11 to 12 (Sub/.GitIgnore live as a source under core.ignoreCase, hit by cross-case and exact-case queries, unmatched control). Total 98 cases, 260 queries.
 
+Grown at fix-source-collision-model: nested-and-layered 12 to 13 (colliding case-variant .gitignore records at root and in a nested dir - the filesystem folds each pair to one file, last content under the first name; queries on both records' patterns plus an unmatched control). Total 99 cases, 265 queries.
+
 ## Verify command
 Command: `cargo build --release && cargo run --release --bin differential -- --corpus corpus/ --strict`
 
@@ -147,6 +149,7 @@ Regressions: a row that was ticked and later disagrees is a High. Flip its row b
 - git init on this machine sets core.ignoreCase=true (NTFS), so every oracle repo matches case-insensitively; the engine ports WM_CASEFOLD (text and plain literals fold, bracket members and escaped literals never fold, ranges try the upcased byte) and the harness mirrors the repo's config into the matcher.
 - WM_CASEFOLD reaches source applicability too: the nested-.gitignore directory-prefix test folds case (dir.c fspathncmp), not only wildmatch - and source-name discovery folds as well, since the filesystem lookup of .gitignore is case-insensitive on an icase filesystem.
 - A queried path starting with ':' is reinterpreted by check-ignore as pathspec magic before matching; never author corpus queries with a leading colon.
+- The filesystem folds colliding names on write: case-variant F records land in one file (last content, first name), so a hand-authored case with two same-folded paths tests the fold, never two coexisting files; the harness models the collision as one source.
 
 ## Definition of done
 Convergence requires all of the following simultaneously:

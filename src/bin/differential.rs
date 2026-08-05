@@ -199,7 +199,10 @@ fn git_in(dir: &Path, args: &[&str]) -> Result<(), String> {
 /// matcher mirrors the repository's core.ignoreCase, exactly as dir.c
 /// reads it: git init sets it true on case-insensitive filesystems, and
 /// the oracle's matching folds case there - including which files count
-/// as ignore sources, since the filesystem name lookup folds too.
+/// as ignore sources, since the filesystem name lookup folds too, and
+/// which files exist at all, since the filesystem folds colliding names
+/// on write: case-variant F records land in one file (last content,
+/// first name) and the source model folds with them.
 fn materialize(case_dir: &Path, recs: &[Rec]) -> Result<(PathBuf, Matcher, Vec<String>), String> {
     let repo = case_dir.join("repo");
     std::fs::create_dir_all(&repo).map_err(|e| format!("mkdir {}: {e}", repo.display()))?;
@@ -216,6 +219,15 @@ fn materialize(case_dir: &Path, recs: &[Rec]) -> Result<(PathBuf, Matcher, Vec<S
     };
     let mut matcher = Matcher::new();
     matcher.set_ignore_case(ignore_case);
+    // Ignore sources are collected, not registered per record: the write
+    // below folds colliding paths - case-variants on an ignore_case
+    // filesystem, or the same path recorded twice anywhere - into one file
+    // holding the last content under the first name. The model must hold
+    // exactly one source per surviving file, so a colliding record replaces
+    // the earlier source's content instead of layering a second source the
+    // disk cannot hold.
+    let mut sources: Vec<(String, Vec<u8>)> = Vec::new();
+    let mut source_index: BTreeMap<String, usize> = BTreeMap::new();
     let mut queries = Vec::new();
     for rec in recs {
         match rec {
@@ -240,7 +252,18 @@ fn materialize(case_dir: &Path, recs: &[Rec]) -> Result<(PathBuf, Matcher, Vec<S
                     name == ".gitignore"
                 };
                 if is_source {
-                    matcher.add_gitignore(dir, content);
+                    let key = if ignore_case {
+                        path.to_ascii_lowercase()
+                    } else {
+                        path.clone()
+                    };
+                    match source_index.get(&key) {
+                        Some(&i) => sources[i].1 = content.clone(),
+                        None => {
+                            source_index.insert(key, sources.len());
+                            sources.push((dir.to_string(), content.clone()));
+                        }
+                    }
                 }
             }
             Rec::Dir(path) => {
@@ -264,6 +287,9 @@ fn materialize(case_dir: &Path, recs: &[Rec]) -> Result<(PathBuf, Matcher, Vec<S
             }
             Rec::Query(q) => queries.push(q.clone()),
         }
+    }
+    for (dir, content) in &sources {
+        matcher.add_gitignore(dir, content);
     }
     Ok((repo, matcher, queries))
 }
@@ -417,6 +443,33 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
         let err = res.expect_err("oracle outside a repository must be a harness failure");
         assert!(err.contains("128"), "error should name exit 128, got: {err}");
+    }
+
+    /// Colliding F records - the same path written twice, or case-variants
+    /// of .gitignore on an ignore_case repo - leave one file on disk: last
+    /// content under the first name. The matcher model must fold the same
+    /// way, one source per surviving file, never two layered sources the
+    /// disk cannot hold.
+    #[test]
+    fn colliding_source_records_fold_to_last_content() {
+        let base = std::env::temp_dir().join(format!("gitignore-collide-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&base);
+        std::fs::create_dir_all(&base).unwrap();
+        let recs = vec![
+            Rec::File(".gitignore".to_string(), b"alpha.txt\n".to_vec()),
+            Rec::File(".gitignore".to_string(), b"beta.txt\n".to_vec()),
+        ];
+        let res = materialize(&base, &recs);
+        let _ = std::fs::remove_dir_all(&base);
+        let (_repo, matcher, _queries) = res.unwrap();
+        assert!(
+            !matcher.is_ignored("alpha.txt", false),
+            "first record's pattern must be dead: its content was overwritten on disk"
+        );
+        assert!(
+            matcher.is_ignored("beta.txt", false),
+            "last record's pattern is the file's real content and must match"
+        );
     }
 
     /// Empty pattern field and a negation pattern both mean not ignored;
