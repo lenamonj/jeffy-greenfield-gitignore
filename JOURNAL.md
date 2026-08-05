@@ -89,3 +89,12 @@ Checkpoint: 67109f71d6ed2e1fabe443b2b00cdb4ff12dca96; PLAN.md row directory-only
 Verification: Acceptance: failing-first evidence is iter 4's recorded 4 disagreements on this slice against the stub; grown slice replays 9 cases, 17 queries, 0 disagreements, exit 0. The foo\/ prediction (dir_only strip leaves lone-backslash body, matches nothing) confirmed live by the oracle. Full Verify: exit 1, 61 cases, 142 queries, 8 disagreements, all in globstar-leading and globstar-infix; red at last checkpoint too, not a regression. Corpus grew 57 to 61, never shrank. cargo test: 4 suites ok. cargo tree: gitignore-matcher alone.
 Learnings: none.
 Next: row-anchoring - also green from the core; grow with oracle-blind anchoring cases before ticking.
+
+## iter 9/12 | cd1c2080-020939 | 2026-08-04 | row-anchoring | done
+
+Task: row-anchoring (High, runtime) - sweep inventory row 5. Slice was green from the core, so grew it 4 to 8 cases first: doc/frotz inside sub/.gitignore (anchored to the nested file's directory, not the root and not deeper), anchored /*.txt at root only, a/*/c with the star bound to exactly one segment, and anchored dir-only /build/ not matching sub/build.
+Changed: corpus/anchoring/05-08.case hand-authored; PLAN.md growth line added; BACKLOG.md row line deleted. No source changes - the anchoring flag, per-source rel-path computation, and glob engine survived all new cases.
+Checkpoint:
+Verification: Acceptance: failing-first evidence is iter 4's recorded 5 disagreements on this slice against the stub; grown slice replays 8 cases, 19 queries, 0 disagreements, exit 0. Full Verify: exit 1, 65 cases, 152 queries, 8 disagreements, all in globstar-leading and globstar-infix; red at last checkpoint too, not a regression. Corpus grew 61 to 65, never shrank. cargo test: 4 suites ok. cargo tree: gitignore-matcher alone.
+Learnings: none.
+Next: row-wildcards - green from the glob engine; grow with oracle-blind wildcard cases before ticking.

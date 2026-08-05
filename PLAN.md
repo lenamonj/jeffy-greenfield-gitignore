@@ -72,6 +72,8 @@ Grown at row-trailing-whitespace sweep: trailing-whitespace 4 to 8 (multiple esc
 
 Grown at row-directory-only sweep: directory-only 5 to 9 (negated dir pattern, unanchored dir pattern at depth plus nonexistent same-name at root, wildcard dir pattern vs same-named file, escaped trailing slash). Total 61 cases, 142 queries.
 
+Grown at row-anchoring sweep: anchoring 4 to 8 (anchored pattern inside nested .gitignore, anchored root wildcard, middle-slash single-star segment, anchored dir-only vs same name at depth). Total 65 cases, 152 queries.
+
 ## Verify command
 Command: `cargo build --release && cargo run --release --bin differential -- --corpus corpus/ --strict`
 

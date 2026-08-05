@@ -13,7 +13,6 @@ Rules:
 
 ## Next
 
-- [ ] row-anchoring (High, runtime, matcher): Sweep inventory row 5. Acceptance: `corpus/anchoring` replays with zero disagreements, observed failing first; row ticked with sweep commit.
 - [ ] row-wildcards (High, runtime, matcher): Sweep inventory row 6. Acceptance: `corpus/wildcards` replays with zero disagreements, observed failing first; row ticked with sweep commit.
 - [ ] row-char-classes (High, runtime, matcher): Sweep inventory row 7. Acceptance: `corpus/char-classes` replays with zero disagreements, observed failing first; row ticked with sweep commit.
 - [ ] row-globstar-leading (High, runtime, matcher): Sweep inventory row 8. Acceptance: `corpus/globstar-leading` replays with zero disagreements, observed failing first; row ticked with sweep commit.
