@@ -22,7 +22,7 @@ Closed tasks are recorded here as one line each (ID, title, closing evidence), b
 
 Task: Scoped-mode derivation audit. Greenfield tree (tracked: .gitattributes, .gitignore, PLAN.md, BACKLOG.md only); derived the full task set from the Definition of done per the Method (harness before matcher).
 Changed: BACKLOG.md seeded with 15 open tasks: Now = scaffold, corpus-freeze, harness; Next = the 12 frozen inventory rows in frozen order. JOURNAL.md bootstrapped from template this iteration.
-Checkpoint:
+Checkpoint: 3033c98fcf470ae6a0134a7a3a0e371c98e484d5. Stall check: audit iteration, 15 backlog items changed state (created open), no stall.
 Verification: Toolchain verified: cargo 1.90.0, git 2.50.1.windows.1 - exactly the version the oracle contract was pre-registered against. Verify command payload passes bash -n. Scores: High 15 (DoD items 1-5 wholly unmet: no build, no corpus, no harness, 12 unswept rows), Medium 0, Low 0. All findings filed as tasks; nothing in-envelope left unfiled.
 Learnings: Oracle git version on this machine matches the pre-registration version string byte for byte, so no version-drift caveat is needed in the harness.
 Next: scaffold - create the crate skeleton so the Verify command can run at all.
