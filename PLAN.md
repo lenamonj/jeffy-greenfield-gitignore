@@ -56,8 +56,8 @@ A row flips to `- [x] swept at <commit> - <cases run, all agreeing with the orac
 - [x] negation: `!` re-includes a previously excluded path; `\!` escapes a literal bang. Slice: `corpus/negation` - swept at 18bf16df780d562bc42b37be586d47534f5beff8 - 4 cases, 7 queries, all agreeing with the oracle
 - [x] directory-only: a trailing `/` restricts the match to directories. Slice: `corpus/directory-only` - swept at 18bf16df780d562bc42b37be586d47534f5beff8 - 9 cases, 17 queries, all agreeing with the oracle
 - [x] anchoring: a pattern with a non-trailing `/` is relative to the `.gitignore` location; otherwise it matches at any depth. Slice: `corpus/anchoring` - swept at 18bf16df780d562bc42b37be586d47534f5beff8 - 8 cases, 19 queries, all agreeing with the oracle
-- [x] wildcards: `*` and `?` never cross a `/`. Slice: `corpus/wildcards` - swept at 18bf16df780d562bc42b37be586d47534f5beff8 - 9 cases, 31 queries, all agreeing with the oracle
-- [x] char-classes: bracket expressions and ranges. Slice: `corpus/char-classes` - swept at 18bf16df780d562bc42b37be586d47534f5beff8 - 12 cases, 30 queries, all agreeing with the oracle
+- [x] wildcards: `*` and `?` never cross a `/`. Slice: `corpus/wildcards` - swept at 4e39d2500b95b8b8c7777cfc13aa27846c73eeba - 10 cases, 37 queries, all agreeing with the oracle
+- [x] char-classes: bracket expressions and ranges. Slice: `corpus/char-classes` - swept at 4e39d2500b95b8b8c7777cfc13aa27846c73eeba - 15 cases, 43 queries, all agreeing with the oracle
 - [x] globstar-leading: a leading `**/` matches in all directories. Slice: `corpus/globstar-leading` - swept at 7365453e92a6ea249698ba58a04fedc2abd58e42 - 6 cases, 19 queries, all agreeing with the oracle
 - [x] globstar-trailing: a trailing `/**` matches everything inside. Slice: `corpus/globstar-trailing` - swept at c68865bae65b0f0beea474fb81bb7e18146c3e60 - 6 cases, 19 queries, all agreeing with the oracle
 - [x] globstar-infix: `/**/` matches zero or more directories. Slice: `corpus/globstar-infix` - swept at eee469021ee289f237b0299b1e2fdd853e33be4b - 7 cases, 26 queries, all agreeing with the oracle
