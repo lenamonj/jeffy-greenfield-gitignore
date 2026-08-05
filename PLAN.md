@@ -30,6 +30,10 @@ A harness that treats "appears in `-v` output" as "ignored" is wrong, because `-
 
 Exit status: 0 when at least one queried path is ignored, 1 when none are, 128 on error. Exit 128 is a **harness failure, never a verdict**. A run that reads 128 as "not ignored" has a broken gate.
 
+Isolation, verified during pre-registration:
+- The oracle consults `core.excludesFile` from the machine's global and system git config, and a configured excludes file silently changes verdicts: with one simulated, a path this corpus never wrote a pattern for was reported ignored. Every oracle invocation therefore runs with `GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null GIT_CONFIG_NOSYSTEM=1`. The nested-and-layered row exercises excludesFile layering by setting it in the case repository's own local config, never by inheriting the machine's.
+- `git check-ignore` outside a repository exits 128. Each corpus case therefore materializes as its own temporary repository (`git init`), and the oracle runs inside that repository, never inside this project's, whose own `.gitignore` (`target/`, `.claude/`) would layer into every verdict.
+
 ## Operating envelope
 Filled in advance as part of pre-registration. Do not reclassify.
 
