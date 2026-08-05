@@ -80,6 +80,8 @@ Grown at row-char-classes sweep: char-classes 7 to 12 (escaped hyphen member, si
 
 Grown at row-globstar-leading sweep: globstar-leading 3 to 6 (leading globstar inside a nested .gitignore, negated leading globstar, attached x**/ exercising the dir.c prefix-strip quirk). Total 77 cases, 188 queries.
 
+Grown at row-globstar-trailing sweep: globstar-trailing 3 to 6 (negation re-inclusion under dir/**, attached a/x** crossing depth via the prefix strip, dir-only trailing d/**/). Total 80 cases, 198 queries.
+
 ## Verify command
 Command: `cargo build --release && cargo run --release --bin differential -- --corpus corpus/ --strict`
 
