@@ -10,7 +10,6 @@ Rules:
 
 ## Now
 
-- [ ] harness (High, test, oracle): No differential driver exists; DoD 2 unmet. Implement the oracle contract: one temp repo per case outside this tree, `GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null GIT_CONFIG_NOSYSTEM=1` isolation, `-z -v --non-matching --no-index --stdin` invocation, four-field NUL parse, negation-aware verdict rule, exit 128 = harness failure under `--strict`. Acceptance: Verify command replays the whole corpus against the stub matcher, reports each disagreement with git's pattern and source, exits non-zero (observed failing first); a case driving oracle exit 128 aborts as harness failure, never a verdict.
 
 ## Next
 
