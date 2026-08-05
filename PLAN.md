@@ -106,6 +106,8 @@ Grown at fix-dotslash-query: anchoring 8 to 9 (leading ./ and ././ queries hitti
 
 Grown at fix-pathspec-normalization-port: anchoring 9 to 10 (interior ./ segment, .. through an existing and a nonexistent segment, duplicate slash - all textually normalized by check-ignore before matching anchored patterns; matched and unmatched controls). Total 101 cases, 275 queries.
 
+Grown at fix-trailing-dot-normalization: directory-only 9 to 10 (final-. and final-.. queries normalizing to dir/ against a dir-only pattern on a nonexistent directory; bare-name, raw trailing-slash, and unmatched controls). Total 102 cases, 280 queries.
+
 ## Verify command
 Command: `cargo build --release && cargo run --release --bin differential -- --corpus corpus/ --strict`
 
@@ -156,6 +158,7 @@ Regressions: a row that was ticked and later disagrees is a High. Flip its row b
 - The filesystem folds colliding names on write: case-variant F records land in one file (last content, first name), so a hand-authored case with two same-folded paths tests the fold, never two coexisting files; the harness models the collision as one source.
 - check-ignore matches the normalized pathspec but echoes it verbatim: ./-shaped corpus queries are legal, the echo check stays byte-exact, and normalization belongs on the matcher side of the comparison only.
 - Pathspec normalization is textual: .. consumes the previous segment with no existence check, duplicate slashes and . segments drop, one trailing slash survives. Never author corpus queries git cannot normalize (leading /, .. above the root, a query normalizing to nothing): those are exit-128 harness failures, not verdicts.
+- A pathspec's dir-ness survives normalization through a final . or .. segment, not only a literal trailing slash: git leaves dir/ behind, and a literal dir-only pattern matches it with no existence check; a wildcard-tail dir-only pattern (ghost/**/, pit/*/) does consult existence at the path-itself match, so the two families diverge on nonexistent directories.
 
 ## Definition of done
 Convergence requires all of the following simultaneously:

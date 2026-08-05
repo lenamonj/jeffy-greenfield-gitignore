@@ -182,7 +182,10 @@ fn run_oracle(repo: &Path, queries: &[String]) -> Result<Vec<OracleRow>, String>
 /// path even though the oracle is fed, and echoes, the original. The
 /// normalization is git's textual pass over a repo-relative pathspec:
 /// "." segments and duplicate slashes drop, ".." consumes the previous
-/// segment with no existence check, and one trailing slash survives.
+/// segment with no existence check, and one trailing slash survives -
+/// including when the final segment is "." or "..", whose collapse ends
+/// the path at a directory boundary and leaves a slash behind, so the
+/// pathspec's dir-ness reaches dir-only patterns textually.
 /// Shapes this port cannot resolve are returned unchanged and left to
 /// the oracle, which rejects them with exit 128, turning the case into
 /// a harness failure: a ".." climbing above the repo root, a leading
@@ -207,7 +210,7 @@ fn normalize_query(q: &str) -> String {
         return q.to_string();
     }
     let mut out = segs.join("/");
-    if q.ends_with('/') {
+    if q.ends_with('/') || matches!(q.rsplit('/').next(), Some(".") | Some("..")) {
         out.push('/');
     }
     out
@@ -498,6 +501,10 @@ mod tests {
         assert_eq!(normalize_query("sub//x.txt"), "sub/x.txt");
         assert_eq!(normalize_query("keep/"), "keep/");
         assert_eq!(normalize_query("sub/.//./x.txt"), "sub/x.txt");
+        assert_eq!(normalize_query("ghost/."), "ghost/");
+        assert_eq!(normalize_query("ghost/./"), "ghost/");
+        assert_eq!(normalize_query("ghost/x/.."), "ghost/");
+        assert_eq!(normalize_query("x/.."), "x/..");
         assert_eq!(normalize_query("../a.log"), "../a.log");
         assert_eq!(normalize_query("/abs.log"), "/abs.log");
         assert_eq!(normalize_query("./"), "./");
