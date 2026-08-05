@@ -154,8 +154,10 @@ fn class_match(p: &[u8], c: u8) -> Option<(usize, bool)> {
 /// Glob match of a pattern body against a candidate, with fnmatch
 /// FNM_PATHNAME semantics as gitignore uses them: `*` and `?` and bracket
 /// expressions never match `/`; `\x` is literal x; a lone trailing
-/// backslash matches nothing. `**` is not special here yet - the globstar
-/// inventory rows implement it - so consecutive stars behave as one.
+/// backslash matches nothing. A `**` run crosses `/` only when it forms a
+/// whole path segment (preceded by start or `/`, followed by end or `/`),
+/// and `**/` also matches zero directories; any other star run behaves as
+/// one plain `*`, per git wildmatch under WM_PATHNAME.
 /// Recursive backtracking; corpus-scale patterns keep it cheap.
 fn glob_match(body: &[u8], text: &[u8]) -> bool {
     let mut pi = 0;
@@ -163,13 +165,29 @@ fn glob_match(body: &[u8], text: &[u8]) -> bool {
     while pi < body.len() {
         match body[pi] {
             b'*' => {
-                let rest = &body[pi + 1..];
+                let mut run_end = pi;
+                while run_end < body.len() && body[run_end] == b'*' {
+                    run_end += 1;
+                }
+                let at_seg_start = pi == 0 || body[pi - 1] == b'/';
+                let at_seg_end = run_end == body.len() || body[run_end] == b'/';
+                let match_slash = run_end - pi >= 2 && at_seg_start && at_seg_end;
+                let rest = &body[run_end..];
+                if match_slash && !rest.is_empty() {
+                    // `**/`: the zero-directory reading skips the slash too.
+                    if glob_match(&rest[1..], &text[ti..]) {
+                        return true;
+                    }
+                }
+                if rest.is_empty() {
+                    return match_slash || !text[ti..].contains(&b'/');
+                }
                 let mut k = ti;
                 loop {
                     if glob_match(rest, &text[k..]) {
                         return true;
                     }
-                    if k >= text.len() || text[k] == b'/' {
+                    if k >= text.len() || (!match_slash && text[k] == b'/') {
                         return false;
                     }
                     k += 1;
@@ -223,15 +241,36 @@ fn basename(path: &str) -> &str {
     path.rsplit('/').next().unwrap_or(path)
 }
 
+/// Length of the wildcard-free prefix: bytes before the first `*`, `?`,
+/// `[`, or `\`, per git dir.c simple_length.
+fn no_wildcard_len(body: &[u8]) -> usize {
+    body.iter()
+        .position(|b| matches!(b, b'*' | b'?' | b'[' | b'\\'))
+        .unwrap_or(body.len())
+}
+
 fn pattern_matches(p: &Pattern, rel: &str, is_dir: bool) -> bool {
     if p.dir_only && !is_dir {
         return false;
     }
-    if p.anchored {
-        glob_match(p.body.as_bytes(), rel.as_bytes())
-    } else {
-        glob_match(p.body.as_bytes(), basename(rel).as_bytes())
+    if !p.anchored {
+        return glob_match(p.body.as_bytes(), basename(rel).as_bytes());
     }
+    // Port of git dir.c match_pathname: the literal prefix is compared
+    // outright and stripped before globbing. The strip is semantic, not
+    // just a fast path: a `**` first wildcard then sits at the start of
+    // what wildmatch sees and crosses slashes even when the prefix ends
+    // mid-segment, so `x**/foo` matches `x/a/foo` and `xfoo`.
+    let body = p.body.as_bytes();
+    let rel = rel.as_bytes();
+    let prefix = no_wildcard_len(body);
+    if prefix > rel.len() || body[..prefix] != rel[..prefix] {
+        return false;
+    }
+    if prefix == body.len() {
+        return prefix == rel.len();
+    }
+    glob_match(&body[prefix..], &rel[prefix..])
 }
 
 /// Last matching pattern in one source decides for that source; None when
@@ -363,6 +402,33 @@ mod tests {
         assert!(glob_match(b"\\*.lit", b"*.lit"), "escaped star is literal");
         assert!(!glob_match(b"\\*.lit", b"a.lit"));
         assert!(!glob_match(b"[abc", b"a"), "unclosed class matches nothing");
+    }
+
+    #[test]
+    fn globstar_is_special_only_as_a_whole_segment() {
+        assert!(glob_match(b"**/foo", b"foo"), "leading **/ matches zero dirs");
+        assert!(glob_match(b"**/foo", b"a/b/foo"));
+        assert!(!glob_match(b"**/foo", b"xfoo"));
+        assert!(glob_match(b"a/**/b", b"a/b"), "infix /**/ matches zero dirs");
+        assert!(glob_match(b"a/**/b", b"a/x/y/b"));
+        assert!(glob_match(b"abc/**", b"abc/d/e"), "trailing /** swallows depth");
+        assert!(!glob_match(b"abc/**", b"abc"), "trailing /** needs content");
+        assert!(glob_match(b"**", b"a"), "bare ** matches anything");
+        assert!(glob_match(b"a**b", b"axyb"), "adjacent ** is a plain *");
+        assert!(!glob_match(b"a**b", b"a/b"), "adjacent ** must not cross /");
+        assert!(!glob_match(b"x**/foo", b"x/a/foo"), "wildmatch alone: not special");
+        assert!(glob_match(b"x**/foo", b"xa/foo"));
+    }
+
+    #[test]
+    fn prefix_strip_makes_first_globstar_special() {
+        // dir.c match_pathname strips the literal prefix before wildmatch,
+        // so at the pattern level x**/foo is x + **/foo, not x*/foo.
+        let p = parse_line("x**/foo").expect("pattern parses");
+        assert!(pattern_matches(&p, "x/a/foo", false), "strip exposes leading **");
+        assert!(pattern_matches(&p, "xfoo", false), "**/ then matches zero dirs");
+        assert!(pattern_matches(&p, "xa/foo", false));
+        assert!(!pattern_matches(&p, "y/a/foo", false), "literal prefix must match");
     }
 
     #[test]

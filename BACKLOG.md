@@ -13,7 +13,6 @@ Rules:
 
 ## Next
 
-- [ ] row-globstar-leading (High, runtime, matcher): Sweep inventory row 8. Acceptance: `corpus/globstar-leading` replays with zero disagreements, observed failing first; row ticked with sweep commit.
 - [ ] row-globstar-trailing (High, runtime, matcher): Sweep inventory row 9. Acceptance: `corpus/globstar-trailing` replays with zero disagreements, observed failing first; row ticked with sweep commit.
 - [ ] row-globstar-infix (High, runtime, matcher): Sweep inventory row 10. Acceptance: `corpus/globstar-infix` replays with zero disagreements, observed failing first; row ticked with sweep commit.
 - [ ] row-precedence (High, runtime, matcher): Sweep inventory row 11. Acceptance: `corpus/precedence` replays with zero disagreements, observed failing first; row ticked with sweep commit.

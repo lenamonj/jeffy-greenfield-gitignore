@@ -78,6 +78,8 @@ Grown at row-wildcards sweep: wildcards 5 to 9 (bare star incl dotfile, multi-st
 
 Grown at row-char-classes sweep: char-classes 7 to 12 (escaped hyphen member, single-char range, class containing slash, negated class with escaped bang, inverted range). Total 74 cases, 178 queries.
 
+Grown at row-globstar-leading sweep: globstar-leading 3 to 6 (leading globstar inside a nested .gitignore, negated leading globstar, attached x**/ exercising the dir.c prefix-strip quirk). Total 77 cases, 188 queries.
+
 ## Verify command
 Command: `cargo build --release && cargo run --release --bin differential -- --corpus corpus/ --strict`
 
