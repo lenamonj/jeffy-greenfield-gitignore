@@ -82,6 +82,8 @@ Grown at row-globstar-leading sweep: globstar-leading 3 to 6 (leading globstar i
 
 Grown at row-globstar-trailing sweep: globstar-trailing 3 to 6 (negation re-inclusion under dir/**, attached a/x** crossing depth via the prefix strip, dir-only trailing d/**/). Total 80 cases, 198 queries.
 
+Grown at row-globstar-infix sweep: globstar-infix 3 to 6 (chained a/**/b/**/c, dir-only infix a/**/tmp/, infix in a nested .gitignore, attached a/b**/c via the prefix strip). Total 83 cases, 210 queries.
+
 ## Verify command
 Command: `cargo build --release && cargo run --release --bin differential -- --corpus corpus/ --strict`
 

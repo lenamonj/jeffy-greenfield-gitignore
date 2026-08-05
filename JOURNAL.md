@@ -143,3 +143,12 @@ Checkpoint: c68865bae65b0f0beea474fb81bb7e18146c3e60; PLAN.md row globstar-trail
 Verification: Acceptance: failing-first evidence is iter 4's recorded full-replay failure against the stub, every slice showing disagreements (69 total); grown slice replays 6 cases, 19 queries, 0 disagreements, exit 0 - all three oracle-blind predictions confirmed live by the oracle. Full Verify: exit 0, 80 cases, 198 queries, 0 disagreements, 0 harness failures. Corpus grew 77 to 80, never shrank. cargo test: 9 tests across 4 suites, all ok. cargo tree: gitignore-matcher alone.
 Learnings: none.
 Next: row-globstar-infix - slice green from the ** engine; grow with oracle-blind cases before ticking.
+
+## iter 3/12 | ca25dfca-024109 | 2026-08-04 | row-globstar-infix | done
+
+Task: row-globstar-infix (High, runtime) - sweep inventory row 10. Slice green as a side effect of iter 1's ** engine, so grew it 3 to 6 cases first per the Lessons rule, oracle-blind: chained a/**/b/**/c (both runs collapse to zero dirs in a/b/c, expand independently in a/x/b/y/c), dir-only infix a/**/tmp/ at zero and one depth plus an out-of-anchor miss, infix inside a nested .gitignore (anchored to sub, root x/a/y unmatched), and attached a/b**/c (prefix strip makes the run segment-initial, so a/b/x/c is ignored, not just a/bx/c).
+Changed: corpus/globstar-infix/04-06.case hand-authored per the NUL token format (od-verified); PLAN.md growth line added; BACKLOG.md row line deleted. No source changes - the iter 1 engine survived all new cases.
+Checkpoint: pending
+Verification: Acceptance: failing-first evidence is this run's iter 1 pre-fix full replay showing globstar-infix 4 disagreements against the pre-** engine (recorded in the iter 12/12 WRAPUP of the previous run and re-observed at iter 1 start); grown slice replays 6 cases, 22 queries, 0 disagreements, exit 0. Full Verify: exit 0, 83 cases, 210 queries, 0 disagreements, 0 harness failures. Corpus grew 80 to 83, never shrank. cargo test: 9 tests across 4 suites, all ok. cargo tree: gitignore-matcher alone.
+Learnings: none.
+Next: row-precedence - slice green from the core's last-match-wins; grow with oracle-blind precedence cases before ticking.
