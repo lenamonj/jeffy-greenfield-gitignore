@@ -139,7 +139,7 @@ Next: row-globstar-trailing - slice green from the trailing-/** arm; grow with o
 
 Task: row-globstar-trailing (High, runtime) - sweep inventory row 9. Slice green as a side effect of iter 1's ** engine, so grew it 3 to 6 cases first per the Lessons rule, oracle-blind: build/** plus !build/keep (re-inclusion works because dir/** excludes contents, never the dir itself), attached a/x** (the prefix-strip quirk's trailing twin - a/xfoo/bar is ignored because the stripped ** crosses depth, and a/x itself matches the bare ** remainder), and dir-only d/**/ (ignores the subdirectory, spares the file).
 Changed: corpus/globstar-trailing/04-06.case hand-authored per the NUL token format (od-verified); PLAN.md growth line added; BACKLOG.md row line deleted. No source changes - the iter 1 engine survived all new cases.
-Checkpoint: pending
+Checkpoint: c68865bae65b0f0beea474fb81bb7e18146c3e60; PLAN.md row globstar-trailing ticked with this hash in the bookkeeping edit. Stall check: 3 corpus case files created outside state files, row task closed, no stall.
 Verification: Acceptance: failing-first evidence is iter 4's recorded full-replay failure against the stub, every slice showing disagreements (69 total); grown slice replays 6 cases, 19 queries, 0 disagreements, exit 0 - all three oracle-blind predictions confirmed live by the oracle. Full Verify: exit 0, 80 cases, 198 queries, 0 disagreements, 0 harness failures. Corpus grew 77 to 80, never shrank. cargo test: 9 tests across 4 suites, all ok. cargo tree: gitignore-matcher alone.
 Learnings: none.
 Next: row-globstar-infix - slice green from the ** engine; grow with oracle-blind cases before ticking.
