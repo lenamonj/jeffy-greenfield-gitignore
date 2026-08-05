@@ -116,3 +116,12 @@ Checkpoint: 7912a65e559a1c456ed84cb4807e9cf2bf27ac37; PLAN.md row char-classes t
 Verification: Acceptance: failing-first evidence is iter 4's recorded 9 disagreements on this slice against the stub; grown slice replays 12 cases, 30 queries, 0 disagreements, exit 0. Full Verify: exit 1, 74 cases, 178 queries, 8 disagreements, all in globstar-leading and globstar-infix; red at last checkpoint too, not a regression. Corpus grew 69 to 74, never shrank. cargo test: 4 suites ok. cargo tree: gitignore-matcher alone.
 Learnings: none.
 Next: iteration 12 is the final iteration - WRAPUP: tidy the ledger and write the handoff; the remaining 5 rows (globstar x3 needing ** implementation, precedence, nested-and-layered) carry to the next run.
+
+## iter 12/12 | cd1c2080-020939 | 2026-08-04 | WRAPUP | done
+
+Task: WRAPUP - final iteration; the next row task (row-globstar-leading) requires implementing ** and cannot both land and be swept safely in the last slot, and 4 more rows follow it, so the run closes with a tidy ledger and this handoff instead.
+Changed: JOURNAL.md only (this entry); BACKLOG.md already tidy - 5 one-line row tasks in Next, in frozen inventory order, nothing in Now or Later, nothing Proposed, nothing blocked.
+Checkpoint:
+Verification: Final Verify this iteration: exit 1, 74 cases, 178 queries, 8 disagreements, 0 harness failures - the 8 sit entirely in globstar-leading (4) and globstar-infix (4). Slices green but rows unswept: globstar-trailing, precedence, nested-and-layered. Inventory position 7 of 12 rows swept, each ticked with its sweep commit. Corpus grew 53 to 74 cases across the run, never shrank.
+Learnings: Handoff for the next run, in ledger order: (1) row-globstar-leading and the ** work - extend glob_match in src/lib.rs; per gitignore(5), ** is special only as a whole path segment (leading **/, trailing /**, infix /**/), and ** adjacent to other characters behaves as a plain *; note **/foo is anchored by its slash, so the fix lives in path-relative matching, and expect the current engine's 8 disagreements to be the failing-first evidence. (2) globstar-trailing, precedence, nested-and-layered are green side-effect slices - grow each with oracle-blind cases before ticking, per the Lessons rule. (3) Invariants that bind every future run: corpus only grows; corpus_gen freeze guard stays; oracle contract in PLAN.md is settled fact; verify command never narrows.
+Next: fresh session, relaunch /jeffy in this directory; the state files carry everything forward.
