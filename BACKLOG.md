@@ -13,7 +13,6 @@ Rules:
 
 ## Next
 
-- [ ] row-nested-and-layered (High, runtime, matcher): Sweep inventory row 12. Acceptance: `corpus/nested-and-layered` replays with zero disagreements, observed failing first; row ticked with sweep commit.
 
 ## Later
 

@@ -161,3 +161,12 @@ Checkpoint: 1b32ddc656d40b60dc8c08942b18995450bd58b3; PLAN.md row precedence tic
 Verification: Acceptance: failing-first evidence is iter 4 of the previous run - full replay against the stub showed every slice failing (69 disagreements); grown slice replays 7 cases, 14 queries, 0 disagreements, exit 0. Full Verify: exit 0, 86 cases, 217 queries, 0 disagreements, 0 harness failures. Corpus grew 83 to 86, never shrank. cargo test: 9 tests across 4 suites, all ok. cargo tree: gitignore-matcher alone.
 Learnings: none.
 Next: row-nested-and-layered - the last unswept row; grow with oracle-blind cases exercising deeper-overrides-shallower and the source layering beneath the tree.
+
+## iter 5/12 | ca25dfca-024109 | 2026-08-04 | row-nested-and-layered | done
+
+Task: row-nested-and-layered (High, runtime) - sweep inventory row 12, the last unswept row. Slice green from the core's source-precedence stack, so grew it 7 to 10 cases first per the Lessons rule, oracle-blind: !keep.txt inside build/.gitignore while build/ is excluded by the root (the ancestor exclusion is absolute - a negation inside an excluded directory is never honored), tree !keep.dat overriding a core.excludesFile *.dat (the X-to-F pairing; only E-to-F existed), and sub/.gitignore carrying both an own-directory-anchored /local.txt (matches sub/local.txt, not sub/deep/local.txt or root local.txt) and cache/ whose exclusion kills sub/cache/data.txt through the ancestor walk.
+Changed: corpus/nested-and-layered/08-10.case hand-authored per the NUL token format (od-verified); PLAN.md growth line added; BACKLOG.md row line deleted. No source changes - the precedence stack, ancestor walk, and per-source rel-path anchoring survived all new cases.
+Checkpoint: pending
+Verification: Acceptance: failing-first evidence is iter 4 of the previous run - full replay against the stub showed every slice failing (69 disagreements); grown slice replays 10 cases, 20 queries, 0 disagreements, exit 0. Full Verify: exit 0, 89 cases, 224 queries, 0 disagreements, 0 harness failures. Corpus grew 86 to 89, never shrank. cargo test: 9 tests across 4 suites, all ok. cargo tree: gitignore-matcher alone.
+Learnings: none.
+Next: ledger empties with all 12 rows swept - Scoped-mode audit against the Definition of done to derive any remaining tasks or start closeout.

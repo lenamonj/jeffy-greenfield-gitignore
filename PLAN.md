@@ -86,6 +86,8 @@ Grown at row-globstar-infix sweep: globstar-infix 3 to 6 (chained a/**/b/**/c, d
 
 Grown at row-precedence sweep: precedence 4 to 7 (dir-only exclude vs plain negation both directions, anchored exclude vs unanchored negation and the reverse, dir-only negation matching the dir but never the file). Total 86 cases, 217 queries.
 
+Grown at row-nested-and-layered sweep: nested-and-layered 7 to 10 (negation inside an excluded directory stays dead, tree negation overriding core.excludesFile, nested .gitignore with own-directory-anchored pattern plus dir exclusion killing a descendant via the ancestor walk). Total 89 cases, 224 queries.
+
 ## Verify command
 Command: `cargo build --release && cargo run --release --bin differential -- --corpus corpus/ --strict`
 
