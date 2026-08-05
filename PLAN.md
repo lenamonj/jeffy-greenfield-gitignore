@@ -106,6 +106,8 @@ Regressions: a row that was ticked and later disagrees is a High. Flip its row b
 
 ## Lessons
 
+- TMPDIR is unset in this Git Bash; write temp logs to the session scratchpad path, never $TMPDIR.
+
 ## Definition of done
 Convergence requires all of the following simultaneously:
 

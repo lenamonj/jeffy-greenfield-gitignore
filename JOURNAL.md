@@ -31,7 +31,7 @@ Next: scaffold - create the crate skeleton so the Verify command can run at all.
 
 Task: scaffold (High, build-ci) - crate skeleton so the Verify command can run. Closed: created package gitignore-matcher (edition 2024, zero dependencies) with lib Matcher stub (matches nothing, to be observed failing by the harness) and differential bin parsing --corpus <dir> --strict, exiting 2 with a not-implemented message.
 Changed: Cargo.toml, Cargo.lock, src/lib.rs, src/bin/differential.rs created. BACKLOG.md: scaffold line deleted.
-Checkpoint:
+Checkpoint: c32d3d7d4df61aa5a883528f0fa85fdd4c1df00f. Stall check: 4 source files created outside state files, scaffold changed state open -> closed, no stall.
 Verification: Acceptance: cargo build --release exit 0, observed. Verify command: exit 2 (harness stub not implemented) - red at last checkpoint too (no project existed), so not a regression; expected red until harness and corpus land. cargo tree: gitignore-matcher v0.1.0 alone, no gitignore-implementing dependency.
 Learnings: TMPDIR is unset in this Git Bash; redirect logs to the session scratchpad path, never $TMPDIR.
 Next: corpus-freeze - generate and freeze the 12 slices, record counts in PLAN.md.
