@@ -379,6 +379,16 @@ pub struct Matcher {
     /// `.gitignore` (fspathncmp). git init sets it true on
     /// case-insensitive filesystems (Windows).
     ignore_case: bool,
+    /// Root of the materialized repository on disk, when the caller has
+    /// one. git reaches a nested `.gitignore` by opening
+    /// `<query-prefix>/.gitignore` through the filesystem, so which
+    /// sources apply to a query is decided by the volume's own name
+    /// resolution - a fold (NTFS $UpCase) no portable function
+    /// reproduces. With a root set, applicability asks the filesystem;
+    /// without one, it falls back to string comparison (ASCII fold
+    /// under `ignore_case`). Pattern text matching is unaffected either
+    /// way: git matches the query's own spelling, never the disk's.
+    repo_root: Option<std::path::PathBuf>,
 }
 
 impl Matcher {
@@ -390,6 +400,15 @@ impl Matcher {
     /// core.ignoreCase. Defaults to false, git's own default.
     pub fn set_ignore_case(&mut self, ignore_case: bool) {
         self.ignore_case = ignore_case;
+    }
+
+    /// Point the matcher at the materialized repository root so nested
+    /// `.gitignore` applicability follows the filesystem's own name
+    /// resolution, exactly as git finds sources by opening
+    /// `<dir>/.gitignore` through the volume's fold. Without a root,
+    /// applicability falls back to string comparison.
+    pub fn set_repo_root(&mut self, root: impl Into<std::path::PathBuf>) {
+        self.repo_root = Some(root.into());
     }
 
     /// Register a `.gitignore` found in `dir` (repo-relative, `/`-separated,
@@ -409,16 +428,37 @@ impl Matcher {
     }
 
     /// Whether a `.gitignore` in `dir` applies to `path`: `dir` must be a
-    /// proper directory prefix. Folds case under core.ignoreCase, as dir.c
-    /// match_pathname compares the base via fspathncmp (strncmp_icase).
-    fn dir_applies(dir: &str, path: &str, ignore_case: bool) -> bool {
+    /// proper directory prefix. With a repo root set, the test is the
+    /// filesystem's: the query prefix at the source's depth must resolve
+    /// to the same directory as the source, under whatever fold the
+    /// volume implements - the same lookup git performs when it opens
+    /// `<prefix>/.gitignore`. Without a root, string comparison folding
+    /// case under core.ignoreCase, as dir.c fspathncmp does for ASCII.
+    fn dir_applies(&self, dir: &str, path: &str) -> bool {
         if dir.is_empty() {
             return true;
+        }
+        if let Some(root) = &self.repo_root {
+            let depth = dir.split('/').count();
+            let segs: Vec<&str> = path.split('/').collect();
+            if segs.len() <= depth {
+                return false;
+            }
+            let prefix = root.join(segs[..depth].join("/"));
+            let src = root.join(dir);
+            return match (prefix.canonicalize(), src.canonicalize()) {
+                (Ok(a), Ok(b)) => a == b,
+                _ => false,
+            };
         }
         let (d, p) = (dir.as_bytes(), path.as_bytes());
         p.len() > d.len()
             && p[d.len()] == b'/'
-            && if ignore_case { p[..d.len()].eq_ignore_ascii_case(d) } else { &p[..d.len()] == d }
+            && if self.ignore_case {
+                p[..d.len()].eq_ignore_ascii_case(d)
+            } else {
+                &p[..d.len()] == d
+            }
     }
 
     /// Verdict for one path from the full source stack, or None when no
@@ -429,7 +469,7 @@ impl Matcher {
         let mut applicable: Vec<&(String, Vec<Pattern>)> = self
             .gitignores
             .iter()
-            .filter(|(dir, _)| Self::dir_applies(dir, path, self.ignore_case))
+            .filter(|(dir, _)| self.dir_applies(dir, path))
             .collect();
         applicable.sort_by_key(|(dir, _)| std::cmp::Reverse(dir.len()));
         for (dir, patterns) in applicable {
@@ -585,6 +625,32 @@ mod tests {
         let mut cs = Matcher::new();
         cs.add_gitignore("Sub", b"foo.txt\n");
         assert!(!cs.is_ignored("sub/foo.txt", false), "case-sensitive default unchanged");
+    }
+
+    #[test]
+    fn repo_root_applicability_asks_the_filesystem() {
+        // With a root set, dir_applies resolves both the source dir and
+        // the query prefix through the real filesystem, so cross-case
+        // reach equals the volume's fold (ASCII variants fold on NTFS,
+        // stay distinct on case-sensitive filesystems); a nonexistent
+        // prefix never applies. The pure fallback keeps its own pinned
+        // test above.
+        let base = std::env::temp_dir().join(format!("gitignore-root-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&base);
+        std::fs::create_dir_all(base.join("Sub")).unwrap();
+        let mut m = Matcher::new();
+        m.set_ignore_case(true);
+        m.set_repo_root(&base);
+        m.add_gitignore("Sub", b"foo.txt\n");
+        let volume_folds =
+            base.join("sub").canonicalize().ok() == base.join("Sub").canonicalize().ok();
+        let cross_case = m.is_ignored("sub/foo.txt", false);
+        let exact = m.is_ignored("Sub/foo.txt", false);
+        let ghost = m.is_ignored("Ghost/foo.txt", false);
+        let _ = std::fs::remove_dir_all(&base);
+        assert_eq!(cross_case, volume_folds, "reach equals the volume's fold");
+        assert!(exact, "exact spelling reaches the source");
+        assert!(!ghost, "a nonexistent prefix resolves nowhere and never applies");
     }
 
     #[test]

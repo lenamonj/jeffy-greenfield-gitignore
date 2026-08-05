@@ -267,6 +267,7 @@ fn materialize(case_dir: &Path, recs: &[Rec]) -> Result<(PathBuf, Matcher, Vec<S
         .map_err(|e| format!("canonicalize {}: {e}", repo.display()))?;
     let mut matcher = Matcher::new();
     matcher.set_ignore_case(ignore_case);
+    matcher.set_repo_root(&repo);
     // Ignore sources are collected, not registered per record: the write
     // below folds colliding paths - case-variants on an ignore_case
     // filesystem, or the same path recorded twice anywhere - into one file
@@ -289,24 +290,24 @@ fn materialize(case_dir: &Path, recs: &[Rec]) -> Result<(PathBuf, Matcher, Vec<S
                 }
                 std::fs::write(&full, content).map_err(|e| format!("write {path}: {e}"))?;
                 // git discovers ignore files by asking the filesystem for
-                // "<dir>/.gitignore"; on an ignore_case repo that lookup is
-                // case-insensitive, so a file written as ".GitIgnore" is a
-                // live source there and must reach the matcher too.
-                let name = path.rsplit_once('/').map_or(path.as_str(), |(_, n)| n);
-                let is_source = if ignore_case {
-                    name.eq_ignore_ascii_case(".gitignore")
-                } else {
-                    name == ".gitignore"
-                };
+                // "<dir>/.gitignore", so whether this file is a live source
+                // is the filesystem's answer too: the lookup resolves
+                // through the volume's fold (finding ".GitIgnore" on NTFS)
+                // or exactly (case-sensitive volumes), never through a
+                // fold the harness predicts.
+                let canon = full
+                    .canonicalize()
+                    .map_err(|e| format!("canonicalize {path}: {e}"))?;
+                let is_source = full
+                    .parent()
+                    .and_then(|d| d.join(".gitignore").canonicalize().ok())
+                    .is_some_and(|gi| gi == canon);
                 if is_source {
                     // The canonical path is the surviving on-disk spelling:
                     // a write landing on an existing file through the
                     // volume's fold canonicalizes to that file's name, so
                     // colliding records share a key without the harness
                     // predicting which names the volume folds.
-                    let canon = full
-                        .canonicalize()
-                        .map_err(|e| format!("canonicalize {path}: {e}"))?;
                     let rel = canon
                         .strip_prefix(&repo_canon)
                         .map_err(|_| format!("{path}: canonical path escapes the repo"))?;
@@ -577,27 +578,51 @@ mod tests {
                 (n != ".git").then_some(n)
             })
             .collect();
+        // All verdicts taken before cleanup: applicability reads the disk.
+        let first_upper = matcher.is_ignored("s\u{00dc}b/a.txt", false);
+        let last_upper = matcher.is_ignored("s\u{00dc}b/b.txt", false);
+        let last_lower = matcher.is_ignored("s\u{00fc}b/b.txt", false);
         let _ = std::fs::remove_dir_all(&base);
         if dirs.len() == 1 {
             assert!(
-                !matcher.is_ignored("s\u{00dc}b/a.txt", false),
+                !first_upper,
                 "folded volume: first record's content was overwritten on disk"
             );
-            assert!(
-                matcher.is_ignored("s\u{00dc}b/b.txt", false),
-                "folded volume: last content lives under the first name"
-            );
+            assert!(last_upper, "folded volume: last content lives under the first name");
         } else {
             assert_eq!(dirs.len(), 2, "unexpected dirs: {dirs:?}");
-            assert!(
-                matcher.is_ignored("s\u{00dc}b/a.txt", false),
-                "distinct volume: first source keeps its own content"
-            );
-            assert!(
-                matcher.is_ignored("s\u{00fc}b/b.txt", false),
-                "distinct volume: second source keeps its own content"
-            );
+            assert!(first_upper, "distinct volume: first source keeps its own content");
+            assert!(last_lower, "distinct volume: second source keeps its own content");
         }
+    }
+
+    /// Source applicability is the filesystem's answer: a query spelled
+    /// in a different case reaches a nested source exactly when the
+    /// volume folds the two spellings to one directory, because git
+    /// finds sources by opening "<prefix>/.gitignore" through that fold.
+    /// On NTFS the u-diaeresis spellings fold; on a case-sensitive
+    /// filesystem they are two names and the cross-case query misses.
+    #[test]
+    fn unicode_source_applicability_follows_filesystem() {
+        let base = std::env::temp_dir().join(format!("gitignore-uapply-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&base);
+        std::fs::create_dir_all(&base).unwrap();
+        let recs =
+            vec![Rec::File("s\u{00dc}b/.gitignore".to_string(), b"a.txt\n".to_vec())];
+        let (repo, matcher, _queries) = materialize(&base, &recs).unwrap();
+        let volume_folds = repo.join("s\u{00fc}b").canonicalize().ok()
+            == repo.join("s\u{00dc}b").canonicalize().ok();
+        // All verdicts taken before cleanup: applicability reads the disk.
+        let cross_case = matcher.is_ignored("s\u{00fc}b/a.txt", false);
+        let exact = matcher.is_ignored("s\u{00dc}b/a.txt", false);
+        let unmatched = matcher.is_ignored("s\u{00fc}b/b.txt", false);
+        let _ = std::fs::remove_dir_all(&base);
+        assert_eq!(
+            cross_case, volume_folds,
+            "cross-case reach must equal the volume's own fold"
+        );
+        assert!(exact, "exact spelling always reaches the source");
+        assert!(!unmatched, "applicability never invents pattern matches");
     }
 
     /// Empty pattern field and a negation pattern both mean not ignored;
