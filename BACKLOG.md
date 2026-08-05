@@ -10,7 +10,6 @@ Rules:
 
 ## Now
 
-- [ ] fix-dir-applies-prefix-panic (High, runtime, matcher): FS-resolved dir_applies admits query prefixes whose byte length differs from the stored source dir (8.3 short names: LONGDI~1 resolves to longdirectoryname), and judge then strips dir.len()+1 bytes from the query - reproduced: F longdirectoryname/.gitignore y.txt, Q LONGDI~1/y.txt panics the differential binary (byte index 18 out of bounds of LONGDI~1/y.txt, exit 101) while the oracle answers ignored (pattern y.txt at LONGDI~1/.gitignore:1). Fix by deriving the source-relative path from the query's own segments at the source's depth, never from dir.len(). Acceptance: an 8.3 short-name query case observed crashing first, then replaying 0 disagreements.
 - [ ] fix-trailing-dot-prefix-overreach (Medium, runtime, matcher): dir_applies canonicalize admits Win32-normalization-only aliases that git's own source open does not honor - reproduced: F sub/.gitignore plain.txt, Q sub./plain.txt and Q sub /plain.txt both matcher=ignored vs oracle=not-ignored (no pattern matched), control sub/plain.txt agreeing. NTFS-level aliases (case fold, 8.3 names) must stay honored. Acceptance: trailing-dot and trailing-space prefix queries observed failing first, then replaying 0 disagreements.
 
 

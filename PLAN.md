@@ -112,6 +112,8 @@ Grown at fix-unicode-collision-fold: nested-and-layered 13 to 14 (Unicode case-v
 
 Grown at fix-unicode-source-applicability: nested-and-layered 14 to 15 (cross-case Unicode query reaching a non-ASCII-cased nested source through the volume's fold, with exact-spelling, cross-case-unmatched, and non-folding sharp-s anti-overfold controls). Total 104 cases, 291 queries.
 
+Grown at fix-dir-applies-prefix-panic: nested-and-layered 15 to 16 (8.3 short-name alias query reaching a long-named nested source - an NTFS-level alias whose byte length differs from the stored dir - with exact-spelling and unmatched controls in both spellings; on a volume without 8.3 generation the alias resolves nowhere and both sides agree the other way). Total 105 cases, 295 queries.
+
 ## Verify command
 Command: `cargo build --release && cargo run --release --bin differential -- --corpus corpus/ --strict`
 
@@ -165,6 +167,7 @@ Regressions: a row that was ticked and later disagrees is a High. Flip its row b
 - A pathspec's dir-ness survives normalization through a final . or .. segment, not only a literal trailing slash: git leaves dir/ behind, and a literal dir-only pattern matches it with no existence check; a wildcard-tail dir-only pattern (ghost/**/, pit/*/) does consult existence at the path-itself match, so the two families diverge on nonexistent directories.
 - The volume's case fold is the NTFS $UpCase table baked in at format time, matching no portable Unicode fold (probed live: u-diaeresis, fullwidth, and sigma pairs fold; sharp-s, dotless-i, Kelvin, final-sigma, supplementary-plane, and NFC/NFD pairs stay distinct); never predict the fold - read the disk back, as materialize does by keying sources on canonical on-disk paths.
 - Two distinct folds live on the verdict path and must never mix: pattern text matching folds ASCII-only against the query's own spelling (WM_CASEFOLD - probed: a non-ASCII pattern matches the byte-equal query and misses the disk-folded variant), while source discovery and applicability fold by the volume's own table through real filesystem lookups (canonicalize).
+- A query prefix admitted by filesystem resolution can differ in byte length from the stored canonical dir (8.3 short names are real NTFS aliases git's opens honor), so source-relative remainders are carved by segment count in the query's own spelling, never by byte offset from a stored spelling.
 
 ## Definition of done
 Convergence requires all of the following simultaneously:

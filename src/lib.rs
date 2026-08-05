@@ -473,7 +473,20 @@ impl Matcher {
             .collect();
         applicable.sort_by_key(|(dir, _)| std::cmp::Reverse(dir.len()));
         for (dir, patterns) in applicable {
-            let rel = if dir.is_empty() { path } else { &path[dir.len() + 1..] };
+            // The query may reach this source through an alias spelling of
+            // the prefix (case variant, 8.3 short name) whose byte length
+            // differs from the stored canonical dir, so the source-relative
+            // remainder is carved by segment count in the query's own
+            // spelling, never by the stored dir's byte length.
+            let rel = if dir.is_empty() {
+                path
+            } else {
+                let depth = dir.split('/').count();
+                match path.splitn(depth + 1, '/').nth(depth) {
+                    Some(rest) => rest,
+                    None => continue,
+                }
+            };
             if let Some(ignored) = last_match(patterns, rel, is_dir, self.ignore_case) {
                 return Some(ignored);
             }
@@ -651,6 +664,32 @@ mod tests {
         assert_eq!(cross_case, volume_folds, "reach equals the volume's fold");
         assert!(exact, "exact spelling reaches the source");
         assert!(!ghost, "a nonexistent prefix resolves nowhere and never applies");
+    }
+
+    #[test]
+    fn alias_prefix_with_different_byte_length_is_carved_by_segments() {
+        // An 8.3 short name (LONGDI~1 for longdirectoryname) is an
+        // NTFS-level alias git's own opens honor; its byte length differs
+        // from the stored canonical dir, so the source-relative remainder
+        // must be carved by segment count - the old byte-offset slice
+        // panicked here. 8.3 generation is per-volume, so the expectation
+        // branches on whether the alias actually resolves.
+        let base = std::env::temp_dir().join(format!("gitignore-alias-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&base);
+        std::fs::create_dir_all(base.join("longdirectoryname")).unwrap();
+        let mut m = Matcher::new();
+        m.set_ignore_case(true);
+        m.set_repo_root(&base);
+        m.add_gitignore("longdirectoryname", b"y.txt\n");
+        let alias_resolves = base.join("LONGDI~1").canonicalize().ok()
+            == base.join("longdirectoryname").canonicalize().ok();
+        let via_alias = m.is_ignored("LONGDI~1/y.txt", false);
+        let via_alias_unmatched = m.is_ignored("LONGDI~1/z.txt", false);
+        let exact = m.is_ignored("longdirectoryname/y.txt", false);
+        let _ = std::fs::remove_dir_all(&base);
+        assert_eq!(via_alias, alias_resolves, "alias reach equals the volume's resolution");
+        assert!(!via_alias_unmatched, "carved remainder must be the real basename");
+        assert!(exact, "exact spelling reaches the source");
     }
 
     #[test]
