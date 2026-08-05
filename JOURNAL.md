@@ -26,3 +26,12 @@ Checkpoint: 3033c98fcf470ae6a0134a7a3a0e371c98e484d5. Stall check: audit iterati
 Verification: Toolchain verified: cargo 1.90.0, git 2.50.1.windows.1 - exactly the version the oracle contract was pre-registered against. Verify command payload passes bash -n. Scores: High 15 (DoD items 1-5 wholly unmet: no build, no corpus, no harness, 12 unswept rows), Medium 0, Low 0. All findings filed as tasks; nothing in-envelope left unfiled.
 Learnings: Oracle git version on this machine matches the pre-registration version string byte for byte, so no version-drift caveat is needed in the harness.
 Next: scaffold - create the crate skeleton so the Verify command can run at all.
+
+## iter 2/12 | cd1c2080-020939 | 2026-08-04 | scaffold | done
+
+Task: scaffold (High, build-ci) - crate skeleton so the Verify command can run. Closed: created package gitignore-matcher (edition 2024, zero dependencies) with lib Matcher stub (matches nothing, to be observed failing by the harness) and differential bin parsing --corpus <dir> --strict, exiting 2 with a not-implemented message.
+Changed: Cargo.toml, Cargo.lock, src/lib.rs, src/bin/differential.rs created. BACKLOG.md: scaffold line deleted.
+Checkpoint:
+Verification: Acceptance: cargo build --release exit 0, observed. Verify command: exit 2 (harness stub not implemented) - red at last checkpoint too (no project existed), so not a regression; expected red until harness and corpus land. cargo tree: gitignore-matcher v0.1.0 alone, no gitignore-implementing dependency.
+Learnings: TMPDIR is unset in this Git Bash; redirect logs to the session scratchpad path, never $TMPDIR.
+Next: corpus-freeze - generate and freeze the 12 slices, record counts in PLAN.md.
