@@ -152,3 +152,12 @@ Checkpoint: 149b1b6985016d9b8dbc857efbd921e9a3b81e62; PLAN.md row globstar-infix
 Verification: Acceptance: failing-first evidence is this run's iter 1 pre-fix full replay showing globstar-infix 4 disagreements against the pre-** engine (recorded in the iter 12/12 WRAPUP of the previous run and re-observed at iter 1 start); grown slice replays 6 cases, 22 queries, 0 disagreements, exit 0. Full Verify: exit 0, 83 cases, 210 queries, 0 disagreements, 0 harness failures. Corpus grew 80 to 83, never shrank. cargo test: 9 tests across 4 suites, all ok. cargo tree: gitignore-matcher alone.
 Learnings: none.
 Next: row-precedence - slice green from the core's last-match-wins; grow with oracle-blind precedence cases before ticking.
+
+## iter 4/12 | ca25dfca-024109 | 2026-08-04 | row-precedence | done
+
+Task: row-precedence (High, runtime) - sweep inventory row 11. Slice green from the core's last-match-wins, so grew it 4 to 7 cases first per the Lessons rule, oracle-blind. The frozen cases already covered re-exclusion ping-pong and last-matching-vs-last-line, so growth targeted last-wins interacting with the other pattern flags: temp/ then !temp (plain negation last spares the dir at root and at depth), anchored sub/a.txt overridden by a later unanchored !a.txt and the reverse order re-excluding sub/d.txt, and n then !n/ vs f then !f/ (dir-only negation matches the dir, never the file, so n survives and f stays ignored).
+Changed: corpus/precedence/05-07.case hand-authored per the NUL token format (od-verified); PLAN.md growth line added; BACKLOG.md row line deleted. No source changes - last_match, the dir_only gate, and the anchoring split survived all new cases.
+Checkpoint: pending
+Verification: Acceptance: failing-first evidence is iter 4 of the previous run - full replay against the stub showed every slice failing (69 disagreements); grown slice replays 7 cases, 14 queries, 0 disagreements, exit 0. Full Verify: exit 0, 86 cases, 217 queries, 0 disagreements, 0 harness failures. Corpus grew 83 to 86, never shrank. cargo test: 9 tests across 4 suites, all ok. cargo tree: gitignore-matcher alone.
+Learnings: none.
+Next: row-nested-and-layered - the last unswept row; grow with oracle-blind cases exercising deeper-overrides-shallower and the source layering beneath the tree.
