@@ -85,7 +85,7 @@ Next: row-directory-only - slice already green from the core; grow it with oracl
 
 Task: row-directory-only (High, runtime) - sweep inventory row 4. Slice was green from the core, so grew it 5 to 9 cases first per the Lessons rule: negated dir pattern (build/ then !build/), unanchored cache/ matching a nested dir plus a nonexistent same-name at root, wildcard *.d/ against a real dir and a same-named file, and foo\/ whose body degenerates to a lone backslash.
 Changed: corpus/directory-only/06-09.case hand-authored; PLAN.md growth line added; BACKLOG.md row line deleted. No source changes - existing dir_only handling, is_dir stat plumbing, and the ancestor walk survived all new cases.
-Checkpoint:
+Checkpoint: 67109f71d6ed2e1fabe443b2b00cdb4ff12dca96; PLAN.md row directory-only ticked with this hash in the bookkeeping edit. Stall check: 4 corpus case files created outside state files, row task closed, no stall.
 Verification: Acceptance: failing-first evidence is iter 4's recorded 4 disagreements on this slice against the stub; grown slice replays 9 cases, 17 queries, 0 disagreements, exit 0. The foo\/ prediction (dir_only strip leaves lone-backslash body, matches nothing) confirmed live by the oracle. Full Verify: exit 1, 61 cases, 142 queries, 8 disagreements, all in globstar-leading and globstar-infix; red at last checkpoint too, not a regression. Corpus grew 57 to 61, never shrank. cargo test: 4 suites ok. cargo tree: gitignore-matcher alone.
 Learnings: none.
 Next: row-anchoring - also green from the core; grow with oracle-blind anchoring cases before ticking.
