@@ -108,7 +108,9 @@ fn posix_class_matches(name: &[u8], c: u8, icase: bool) -> Option<bool> {
         b"lower" => c.is_ascii_lowercase(),
         b"print" => c == b' ' || c.is_ascii_graphic(),
         b"punct" => c.is_ascii_punctuation(),
-        b"space" => c.is_ascii_whitespace() || c == 0x0b,
+        // git classifies via its own sane-ctype, not libc: GIT_SPACE is
+        // exactly space, tab, LF, CR - VT and FF are not isspace there.
+        b"space" => matches!(c, b' ' | b'\t' | b'\n' | b'\r'),
         b"upper" => c.is_ascii_uppercase() || (icase && c.is_ascii_lowercase()),
         b"xdigit" => c.is_ascii_hexdigit(),
         _ => return None,
@@ -550,6 +552,13 @@ mod tests {
         assert!(!glob_match(b"[[:digit]w", b"5w", false));
         assert!(glob_match(b"[![:space:]]y", b"ay", false));
         assert!(!glob_match(b"[![:space:]]y", b" y", false));
+        // git sane-ctype GIT_SPACE members, all four, and only those.
+        assert!(glob_match(b"a[[:space:]]b", b"a b", false));
+        assert!(glob_match(b"a[[:space:]]b", b"a\tb", false));
+        assert!(glob_match(b"a[[:space:]]b", b"a\nb", false));
+        assert!(glob_match(b"a[[:space:]]b", b"a\rb", false));
+        assert!(!glob_match(b"a[[:space:]]b", b"a\x0bb", false), "VT is not git isspace");
+        assert!(!glob_match(b"a[[:space:]]b", b"a\x0cb", false), "FF is not git isspace");
         // Casefold semantics pinned live against the oracle (core.ignoreCase
         // repos): literals and ranges fold, bracket members do not.
         assert!(glob_match(b"K.txt", b"k.txt", true), "icase folds plain literals");

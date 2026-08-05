@@ -10,7 +10,6 @@ Rules:
 
 ## Now
 
-- [ ] fix-posix-space-set (Medium, runtime, matcher): posix_class_matches admits VT and FF in [[:space:]] but git's sane-ctype isspace is space, tab, newline, carriage return only, so a[[:space:]]b wrongly matches at VT and FF (oracle: no pattern matched). Acceptance: corpus/char-classes grown with a[[:space:]]b queried at VT and FF observed failing first, then replaying 0 disagreements.
 
 ## Next
 

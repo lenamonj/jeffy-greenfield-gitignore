@@ -96,6 +96,8 @@ Grown at fix-bom-skip: blank-and-comment 4 to 5 (head BOM skipped in .gitignore 
 
 Grown at fix-icase-dir-filter: nested-and-layered 10 to 11 (Sub/.gitignore applying to sub/foo.txt under core.ignoreCase, exact-case and unmatched controls). Total 96 cases, 253 queries.
 
+Grown at fix-posix-space-set: char-classes 15 to 16 (a[[:space:]]b dead at VT and FF per git sane-ctype, space and tab member controls matching). Total 97 cases, 257 queries.
+
 ## Verify command
 Command: `cargo build --release && cargo run --release --bin differential -- --corpus corpus/ --strict`
 
